@@ -1,69 +1,52 @@
 #ifndef WIFI_HANDLER_H 
 #define WIFI_HANDLER_H
 
-#include <Arduino.h>
-#include "../../Utils/Adresses.h"
-#include <WiFi.h>
-#include "../../Utils/Exceptions.h"
 #include "Logger.h"
+#include <WiFi.h>
 
+class WifiHandler {
+private:
+  unsigned long lastAttemptTime = 0;
+  const unsigned long retryInterval = 500;
+  bool isConnecting = false;
+  String ssid, password;
 
-using namespace std;
+public:
+  void startConnection(const char* _ssid, const char* _password) {
+    ssid = _ssid;
+    password = _password;
+    Logger::getInstance()->info("Starting WiFi connection...");
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
+    WiFi.begin(ssid.c_str(), password.c_str());
+    isConnecting = true;
+  }
 
-class WifiHandler{
-    private:
-        const string ssid;
-        const string password;
-    public:
-        static const int CONNECTION_TIMEOUT_MILLIS = 5000;
-        WifiHandler(string ssid, string password): ssid(ssid), password(password){};
+  void update() {
+    if (!isConnecting || WiFi.status() == WL_CONNECTED) return;
 
-        void init(){
-            WiFi.mode(WIFI_STA);
-        };
+    if (millis() - lastAttemptTime > retryInterval) {
+      lastAttemptTime = millis();
+    }
 
-        String getUnitMac(){
-            return WiFi.macAddress();
-        }
+    if (WiFi.status() == WL_CONNECTED) {
+      isConnecting = false;
+      Logger::getInstance()->info("WiFi connected! IP: ");
+      Logger::getInstance()->info(WiFi.localIP().toString().c_str());
+    }
+  }
 
-        void connect(){
-            WiFi.mode(WIFI_STA);
-            if(isWifiConnected()){
-                return;
-            }else{
-                unsigned long startTime = millis();
-                WiFi.begin(ssid.c_str(), password.c_str());
-                while(!isWifiConnected() && (millis() - startTime) < CONNECTION_TIMEOUT_MILLIS){
-                    delay(200);
-                }
-                if(!isWifiConnected()){
-                    throw WifiError();
-                }
-            }            
-        }
-        void disconnect(){
-            WiFi.disconnect(true);
-            delay(100); // wait for wifi to disconnect fully
-            WiFi.mode(WIFI_STA);
-        }
+  bool isConnected() const {
+    return WiFi.status() == WL_CONNECTED;
+  }
 
-        String getMacAddress() {
-            uint8_t mac[6];
-            WiFi.macAddress(mac);
-            return macToString(mac).c_str();
-        }
-
-        int getChannel() {
-            if(isWifiConnected()) {
-                return WiFi.channel();
-            }else{
-                throw WifiError();
-            }
-        }
-
-        bool isWifiConnected(){
-            return WiFi.status() == WL_CONNECTED;
-        }
+  void disconnect() {
+    Logger::getInstance()->info("Disconnecting from WiFi...");
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    Logger::getInstance()->info("WiFi disconnected and turned off.");
+  }
 };
 
 

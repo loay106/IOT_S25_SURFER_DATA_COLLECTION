@@ -9,8 +9,6 @@ Sampler* sampler;
 
 const long samplingIntervalMillis = 5000;
 int startTimeMillis;
-bool isSampling;
-
 
 void setup() {
   logger = Logger::getInstance();
@@ -23,7 +21,7 @@ void setup() {
   //Force_HX711* force1 = new Force_HX711(logger,sdCardHandler, 300, 12, 13);
   Mock_HX711* mock2 = new Mock_HX711(logger,sdCardHandler, 30);
 
-  sampler = new Sampler(logger,sdCardHandler, nullptr);
+  sampler = new Sampler(logger,sdCardHandler);
   sampler->init();
   //IMU0->init();
   //force1->init();
@@ -34,16 +32,14 @@ void setup() {
 
   startTimeMillis = millis();
   sampler->startSampling(rand());
-  isSampling = true;
 }
 
 void loop() {
   if(millis() - startTimeMillis < samplingIntervalMillis){
     sampler->writeSensorsData();
     delay(3);
-  }else if(isSampling){
+  }else if(sampler->isSampling()){
     sampler->stopSampling();
-    isSampling=false;
   }else{
     // simulation stopped
     delay(1000);
