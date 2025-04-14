@@ -9,11 +9,10 @@ using namespace std;
 #include <SD.h>
 #include <Arduino.h>
 #include <Wire.h>
+#include <FS.h>
 
 #include "../../Utils/Exceptions.h"
 #include "Logger.h"
-
-
 
 class SDCardHandler{
     private:
@@ -38,6 +37,9 @@ class SDCardHandler{
         void createFile(string filePath);
         void deleteFile(String filePath);
         void writeData(string filePath,const char* data);
+        bool exists(String& path);
+        fs::FS* getFS();
+        String calculateMD5(String& path);
 
         SDCardHandler::SDCardFileReader readFile(string filePath);
 

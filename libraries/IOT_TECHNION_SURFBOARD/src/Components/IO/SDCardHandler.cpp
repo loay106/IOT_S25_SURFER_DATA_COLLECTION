@@ -1,4 +1,5 @@
 #include "SDCardHandler.h"
+#include <MD5Builder.h>
 
 SDCardHandler::SDCardHandler(const uint8_t SDCardChipSelectPin, Logger* logger): SDCardChipSelectPin(SDCardChipSelectPin), logger(logger){}
 
@@ -22,6 +23,14 @@ void SDCardHandler::getFolder(String folderPath , File* root){
         logger->error("Failed to open directory");
         throw SDCardError();
     }
+}
+
+bool SDCardHandler::exists(String& path) {
+    return SD.exists(path);
+}
+
+fs::FS* SDCardHandler::getFS() {
+    return &SD;
 }
 
 void SDCardHandler::createFolder(string folderName){
@@ -143,4 +152,28 @@ String SDCardHandler::SDCardFileReader::readNextLine(){
 
 void SDCardHandler::SDCardFileReader::close(){
     file.close();
+}
+
+String SDCardHandler::calculateMD5(String& filePath) {
+    File file = SD.open(filePath, FILE_READ);
+    if (!file) {
+        logger->error("Failed to open file for MD5 calculation: " + string(filePath.c_str()));
+        throw SDCardError();
+    }
+
+    MD5Builder md5;
+    md5.begin();
+
+    const size_t bufferSize = 512;
+    uint8_t buffer[bufferSize];
+
+    while (file.available()) {
+        size_t bytesRead = file.read(buffer, bufferSize);
+        md5.add(buffer, bytesRead);
+    }
+
+    md5.calculate();
+    file.close();
+
+    return md5.toString();  // Returns a 32-character hex string
 }
