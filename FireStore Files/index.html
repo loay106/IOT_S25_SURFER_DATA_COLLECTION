@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surfer Data Collection - Export Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        main {
+            padding: 20px;
+            text-align: center;
+        }
+        .note {
+            background: linear-gradient(to right, #e0f7fa, #e1f5fe);
+            color: #00796b;
+            border: 1px solid #4db6ac;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .note h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .note ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .note ul li {
+            margin: 10px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .loading {
+            display: none;
+            font-size: 16px;
+            color: #00796b;
+            margin-top: 10px;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Surfer Data Collection</h1>
+</header>
+<main>
+    <h2>Export Data</h2>
+    <div class="note">
+        <h3>Important Notice</h3>
+        <ul>
+            <li>🔄 <strong>Wait for all file uploads to complete</strong>. The process is active as long as the light is on.</li>
+            <li>📥 <strong>Once the upload finishes</strong>, go to the file location and click <strong>"New Access Token"</strong> to download the files.</li>
+        </ul>
+    </div>
+    <button onclick="triggerExport()">Export All Data</button>
+    <p class="loading" id="loadingText">⏳ Exporting data, please wait...</p>
+    <p>After exporting, you can access the files in our <a href="https://console.firebase.google.com/u/2/project/surfer-data-project/storage/surfer-data-project.firebasestorage.app/files" target="_blank">Firebase Storage</a>.</p>
+</main>
+<footer>
+    <p>&copy; 2025 Surfer Data Collection</p>
+</footer>
+<script>
+    async function triggerExport() {
+        const loadingText = document.getElementById('loadingText');
+        loadingText.style.display = 'block';
+
+        try {
+            const response = await fetch('https://us-central1-surfer-data-project.cloudfunctions.net/exportAllToCSV');
+            const result = await response.json();
+            alert(result.message);
+        } catch (error) {
+            console.error('Error triggering export:', error);
+            alert('An error occurred while triggering the export.');
+        } finally {
+            loadingText.style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>
