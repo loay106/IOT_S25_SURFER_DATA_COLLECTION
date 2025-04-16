@@ -32,7 +32,9 @@ class SDCardHandler{
 
         void init();
         void getFolder(String folderPath , File* root);
-
+        File open(const String& path) {
+            return SD.open(path);
+        }
         void createFolder(string folderName);
         void createFile(string filePath);
         void deleteFile(String filePath);

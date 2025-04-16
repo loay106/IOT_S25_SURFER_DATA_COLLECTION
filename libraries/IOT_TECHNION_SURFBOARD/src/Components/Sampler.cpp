@@ -20,7 +20,7 @@ void Sampler::init(){
     }
 }
 
-void Sampler::startSampling(int timestamp){
+void Sampler::startSampling(unsigned long timestamp){
     string curretTimestamp = to_string(timestamp);
     logger->info("Sampling started!");
     for(int i=0;i<sensors.size(); i++){

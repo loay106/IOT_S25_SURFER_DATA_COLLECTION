@@ -29,7 +29,7 @@ def list_available_sampling_files(ip) -> list:
 
 
 def download_file(ip, device_id, filename, validate_download: bool):
-    filename_only = os.path.basename(filename) + ".tmp"
+    filename_only = os.path.basename(filename)
     device_dir = os.path.join(SAMPLINGS_DOWNLOAD_DIRECTORY, device_id)
     os.makedirs(device_dir, exist_ok=True)
 

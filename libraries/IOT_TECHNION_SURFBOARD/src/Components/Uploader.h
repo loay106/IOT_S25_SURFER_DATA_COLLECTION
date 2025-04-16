@@ -10,6 +10,7 @@
 #include <ESPmDNS.h>
 #include <MD5Builder.h>
 #include <vector>
+#include <map>
 
 class Uploader {
 private:
@@ -19,6 +20,7 @@ private:
   unsigned long lastRetryTime = 0;
   const unsigned long retryInterval = 5000;
   String hostname;
+  std::map<std::string, String> md5Cache;
 
 public:
   Uploader(SDCardHandler* sdHandler, const String& macAddress) : server(80), sd(sdHandler) {
@@ -46,7 +48,7 @@ public:
       Logger::getInstance()->debug("mDNS services registered.");
     }
 
-    server.on("/list/samplings", HTTP_GET, [this](AsyncWebServerRequest *request){
+    server.on("/list", HTTP_GET, [this](AsyncWebServerRequest *request){
       Logger::getInstance()->info("Received request to /list");
       std::vector<std::string> files = sd->listFilesInDir("/samplings");
       String json = "{\"files\":[";
@@ -77,9 +79,46 @@ public:
         return;
       }
 
-      AsyncWebServerResponse* response = request->beginResponse(*sd->getFS(), filepath, "application/octet-stream", true);
+      File file = sd->open(filepath);
+      if (!file || file.isDirectory()) {
+        request->send(500, "application/json", "{\"error\":\"Failed to open file\"}");
+        return;
+      }
+
+      size_t fileSize = file.size();
+      AsyncWebServerResponse *response = request->beginChunkedResponse("application/octet-stream",
+        [file, this, filepath](uint8_t *buffer, size_t maxLen, size_t index) mutable -> size_t {
+          static MD5Builder md5;
+          static bool md5Started = false;
+          static size_t totalRead = 0;
+
+          if (!md5Started) {
+            md5.begin();
+            md5Started = true;
+          }
+
+          size_t bytesRead = file.read(buffer, maxLen);
+          if (bytesRead > 0) {
+            md5.add(buffer, bytesRead);
+            totalRead += bytesRead;
+          }
+
+          if (bytesRead == 0) {
+            file.close();
+            md5.calculate();
+            String finalMd5 = md5.toString();
+            md5Cache[std::string(filepath.c_str())] = finalMd5;
+            Logger::getInstance()->debug("MD5 calculated and cached: " + std::string(finalMd5.c_str()));
+            md5Started = false;
+            totalRead = 0;
+          }
+
+          return bytesRead;
+        });
+
+      response->addHeader("Connection", "close");
       request->send(response);
-      Logger::getInstance()->info("Serving file: " + std::string(filepath.c_str()));
+      Logger::getInstance()->info("Streaming file: " + std::string(filepath.c_str()));
     });
 
     server.on("/validate", HTTP_GET, [this](AsyncWebServerRequest *request){
@@ -91,25 +130,21 @@ public:
         return;
       }
 
-      String filepath = request->getParam("file")->value();
+      String filename = request->getParam("file")->value();
       String expected_md5 = request->getParam("md5")->value();
+      std::string filename_key = std::string(filename.c_str());
 
-      if (filepath.length() == 0) {
-        Logger::getInstance()->debug("Invalid filename provided: " + std::string(filepath.c_str()));
-        request->send(400, "application/json", "{\"error\":\"Invalid filename format\"}");
+      Logger::getInstance()->debug("Validating file: " + filename_key + " against MD5: " + std::string(expected_md5.c_str()));
+
+      if (md5Cache.find(filename_key) == md5Cache.end()) {
+        Logger::getInstance()->debug("MD5 not found in cache for file: " + filename_key);
+        request->send(404, "application/json", "{\"error\":\"MD5 not cached\"}");
         return;
       }
 
-      Logger::getInstance()->debug("Validating file: " + std::string(filepath.c_str()) + " against MD5: " + std::string(expected_md5.c_str()));
+      String actual_md5 = md5Cache[filename_key];
+      Logger::getInstance()->debug("Cached MD5: " + std::string(actual_md5.c_str()));
 
-      if (!sd->exists(filepath)) {
-        Logger::getInstance()->debug("File not found for validation: " + std::string(filepath.c_str()));
-        request->send(404, "application/json", "{\"error\":\"File not found\"}");
-        return;
-      }
-
-      String actual_md5 = sd->calculateMD5(filepath);
-      Logger::getInstance()->debug("Calculated MD5: " + std::string(actual_md5.c_str()));
       if (actual_md5 == expected_md5) {
         Logger::getInstance()->debug("MD5 match confirmed.");
         request->send(200, "application/json", "{\"status\":\"MD5 match\"}");

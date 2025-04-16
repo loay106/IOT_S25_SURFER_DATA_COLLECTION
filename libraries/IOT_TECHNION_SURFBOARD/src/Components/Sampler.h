@@ -22,7 +22,7 @@ class Sampler {
 
         void addSensor(SensorBase* sensor);
         void init();
-        void startSampling(int timestamp);
+        void startSampling(unsigned long timestamp);
         void stopSampling();
         bool isSampling();
         void writeSensorsData();
