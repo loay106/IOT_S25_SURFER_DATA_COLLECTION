@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import questionary
 from questionary import Choice
@@ -51,11 +52,26 @@ def scan_devices_flow():
 
 
 def download_by_timestamp(timestamp, validate_download):
-    for hostname, device in FOUND_DEVICES.items():
-        files = device.available_samplings.get(timestamp, set())
+    def download_for_device(dev):
+        files = dev.available_samplings.get(timestamp, set())
+        unit_mac = dev.hostname.split("-")[1]
+
         for file in files:
-            unit_mac = device.hostname.split("-")[1]
-            download_file(device.ip, unit_mac, file, validate_download)
+            download_file(dev.ip, unit_mac, file, validate_download)
+
+    tasks = []
+
+    with ThreadPoolExecutor(max_workers=len(FOUND_DEVICES)) as executor:
+        for hostname, device in FOUND_DEVICES.items():
+            future = executor.submit(download_for_device, device)
+            tasks.append(future)
+
+        for future in as_completed(tasks):
+            try:
+                future.result()
+            except Exception as e:
+                print(f"[!] Device download task failed: {e}")
+
     merge_files(timestamp)
 
 
