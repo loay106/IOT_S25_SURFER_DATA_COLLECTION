@@ -43,9 +43,10 @@ public:
       MDNS.addService("_surferdata", "_tcp", 80);
       MDNS.addServiceTxt("_http", "_tcp", "device", hostname);
       MDNS.addServiceTxt("_surferdata", "_tcp", "device", hostname);
+      Logger::getInstance()->debug("mDNS services registered.");
     }
 
-    server.on("/list", HTTP_GET, [this](AsyncWebServerRequest *request){
+    server.on("/list/samplings", HTTP_GET, [this](AsyncWebServerRequest *request){
       Logger::getInstance()->info("Received request to /list");
       std::vector<std::string> files = sd->listFilesInDir("/samplings");
       String json = "{\"files\":[";
@@ -55,22 +56,23 @@ public:
       }
       json += "]}";
       request->send(200, "application/json", json);
-      Logger::getInstance()->debug("Listed " + std::to_string(files.size()) + " files");
+      Logger::getInstance()->debug("Responded with file list JSON: " + std::string(json.c_str()));
     });
 
     server.on("/download", HTTP_GET, [this](AsyncWebServerRequest *request){
       Logger::getInstance()->info("Received request to /download");
 
       if (!request->hasParam("file")) {
+        Logger::getInstance()->debug("Missing 'file' parameter in download request");
         request->send(400, "application/json", "{\"error\":\"Missing 'file' parameter\"}");
         return;
       }
 
-      String filename = request->getParam("file")->value();
-      String filepath = "/samplings/" + filename;
-      Logger::getInstance()->debug("Requested file: " + std::string(filepath.c_str()));
+      String filepath = request->getParam("file")->value();
+      Logger::getInstance()->debug("Requested file path: " + std::string(filepath.c_str()));
 
       if (!sd->exists(filepath)) {
+        Logger::getInstance()->debug("File not found: " + std::string(filepath.c_str()));
         request->send(404, "application/json", "{\"error\":\"File not found\"}");
         return;
       }
@@ -84,25 +86,35 @@ public:
       Logger::getInstance()->info("Received request to /validate");
 
       if (!request->hasParam("file") || !request->hasParam("md5")) {
+        Logger::getInstance()->debug("Missing parameters in validate request");
         request->send(400, "application/json", "{\"error\":\"Missing 'file' or 'md5' parameter\"}");
         return;
       }
 
-      String filename = request->getParam("file")->value();
+      String filepath = request->getParam("file")->value();
       String expected_md5 = request->getParam("md5")->value();
-      String filepath = "/samplings/" + filename;
 
-      Logger::getInstance()->debug("Validating file: " + std::string(filepath.c_str()) + " with MD5: " + std::string(expected_md5.c_str()));
+      if (filepath.length() == 0) {
+        Logger::getInstance()->debug("Invalid filename provided: " + std::string(filepath.c_str()));
+        request->send(400, "application/json", "{\"error\":\"Invalid filename format\"}");
+        return;
+      }
+
+      Logger::getInstance()->debug("Validating file: " + std::string(filepath.c_str()) + " against MD5: " + std::string(expected_md5.c_str()));
 
       if (!sd->exists(filepath)) {
+        Logger::getInstance()->debug("File not found for validation: " + std::string(filepath.c_str()));
         request->send(404, "application/json", "{\"error\":\"File not found\"}");
         return;
       }
 
       String actual_md5 = sd->calculateMD5(filepath);
+      Logger::getInstance()->debug("Calculated MD5: " + std::string(actual_md5.c_str()));
       if (actual_md5 == expected_md5) {
+        Logger::getInstance()->debug("MD5 match confirmed.");
         request->send(200, "application/json", "{\"status\":\"MD5 match\"}");
       } else {
+        Logger::getInstance()->debug("MD5 mismatch.");
         request->send(409, "application/json", "{\"error\":\"MD5 mismatch\"}");
       }
     });
@@ -110,6 +122,7 @@ public:
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
       String status = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
       String json = "{\"status\":\"" + status + "\"}";
+      Logger::getInstance()->debug("Responding to /status with: " + std::string(json.c_str()));
       request->send(200, "application/json", json);
     });
 
@@ -118,7 +131,7 @@ public:
     Logger::getInstance()->info("Uploader server started on port 80");
   }
 
-  void update() {
+  void loop() {
     if (!serverStarted && WiFi.status() == WL_CONNECTED) {
       if (millis() - lastRetryTime >= retryInterval) {
         lastRetryTime = millis();

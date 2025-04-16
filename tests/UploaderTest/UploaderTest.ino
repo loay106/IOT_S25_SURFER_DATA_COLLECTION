@@ -11,8 +11,8 @@ SDCardHandler* sdCardHandler;
 Uploader* uploader;
 
 // Replace with your Wi-Fi credentials
-const char* ssid = "Loay's phone";
-const char* password = "test123456";
+const char* ssid = "BEZEQINT-F2A4-2.4G";
+const char* password = "fEuw4oZdvCJ4L";
 
 void setup() {
   logger = Logger::getInstance();
@@ -29,10 +29,8 @@ void setup() {
 
   // Start uploader with MAC as identifier
   String macId = "12345";
- // uploader = new Uploader(sdCardHandler, macId);
-  //uploader->begin();
-
-
+  uploader = new Uploader(sdCardHandler, macId);
+  uploader->begin();
 
 }
 
@@ -40,10 +38,8 @@ void loop() {
   if(!wifi->isConnected()){
     wifi->reconnect();
   }else{
-    // wifi connected
-    logger->info(wifi->getIP().c_str());
+    uploader->loop();
+    //logger->info(wifi->getIP().c_str());
     delay(500);
   }
-  //uploader->update();
- // delay(10); // yield to FreeRTOS
 }
