@@ -35,7 +35,7 @@ def merge_files(timestamp, base_dir="./tmp/samplings", output_dir="./samplings")
                 # Read sampling values
                 with open(filepath, "r") as f:
                     line = f.read().strip()
-                    print(f"[DEBUG] Reading from {filepath}: {line}")
+                    # print(f"[DEBUG] Reading from {filepath}: {line}")
                     values = [v for v in line.split("|") if v.strip() != ""]
 
                 if not values or (len(values) == 1 and values[0] == ''):

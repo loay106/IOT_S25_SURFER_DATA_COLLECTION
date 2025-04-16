@@ -3,7 +3,6 @@ import time
 import hashlib
 import requests
 
-
 __all__ = [
     'SAMPLINGS_DOWNLOAD_DIRECTORY',
     'list_available_sampling_files',
@@ -22,18 +21,27 @@ def list_available_sampling_files(ip) -> list:
     try:
         url = f"http://{ip}:{PORT}{LIST_SAMPLINGS_ENDPOINT}"
         response = requests.get(url)
-        print(f"[DEBUG] Raw response from {ip}:", response.text)
+        # print(f"[DEBUG] Raw response from {ip}:", response.text)
         return response.json().get("files")
     except Exception as e:
         print(f"[!] Failed to list files from {ip}: {e}")
         return []
 
 
-def download_file(ip, device_id, filename):
-    filename_only = os.path.basename(filename)
+def download_file(ip, device_id, filename, validate_download: bool):
+    filename_only = os.path.basename(filename) + ".tmp"
     device_dir = os.path.join(SAMPLINGS_DOWNLOAD_DIRECTORY, device_id)
     os.makedirs(device_dir, exist_ok=True)
-    path = os.path.join(device_dir, filename_only)
+
+    tmp_path = os.path.join(device_dir, filename_only + ".tmp")
+    final_path = os.path.join(device_dir, filename_only)
+
+    if os.path.exists(final_path):
+        print(f"[+] {filename} was downloaded before, skipping file...")
+        return
+
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
 
     while True:
         try:
@@ -41,18 +49,22 @@ def download_file(ip, device_id, filename):
             response = requests.get(url)
 
             if response.ok:
-                with open(path, 'wb') as f:
+                with open(tmp_path, 'wb') as f:
                     f.write(response.content)
-                print(f"[+] Downloaded {filename} from {ip} → saved to {path}")
+                print(f"[+] Downloaded {filename} from ip:{ip}, device_id:{device_id} saved to {tmp_path}")
 
-                # Calculate MD5 locally
-                local_md5 = _calculate_md5(path)
-                if local_md5:
-                    _validate_file_on_device(ip, filename, local_md5)
+                if validate_download:
+                    # Calculate MD5 locally
+                    local_md5 = _calculate_md5(tmp_path)
+                    if local_md5:
+                        _validate_file_on_device(ip, filename, local_md5)
+                    else:
+                        print(f"[!] Failed to calculate MD5 for {filename_only}")
+                    os.rename(tmp_path, final_path)
+                    break  # Exit loop on success
                 else:
-                    print(f"[!] Failed to calculate MD5 for {filename_only}")
-                break  # Exit loop on success
-
+                    os.rename(tmp_path, final_path)
+                    break  # Exit loop on success
             else:
                 print(f"[!] Download failed with status {response.status_code}. Retrying...")
 
@@ -102,9 +114,3 @@ def _validate_file_on_device(ip, filename, expected_md5):
             print(f"[!] Error validating {filename} on {ip}: {e}. Retrying...")
 
         time.sleep(2)
-
-
-
-
-
-

@@ -1,7 +1,8 @@
 import os
-import time
+from datetime import datetime, timezone
 
 import questionary
+from questionary import Choice
 
 from device_scanner import *
 from files_downloader import *
@@ -30,66 +31,105 @@ def extract_timestamp(filename):
 
 
 def scan_devices_flow():
-    found = scan_for_mdns_services()
-    for hostname, ip in found.items():
-        if hostname not in FOUND_DEVICES:
-            FOUND_DEVICES[hostname] = ESP32Device(hostname, ip)
-        else:
-            FOUND_DEVICES[hostname].ip = ip
+    try:
+        found = scan_for_mdns_services()
+        for hostname, ip in found.items():
+            if hostname not in FOUND_DEVICES:
+                FOUND_DEVICES[hostname] = ESP32Device(hostname, ip)
+            else:
+                FOUND_DEVICES[hostname].ip = ip
 
-        if len(FOUND_DEVICES[hostname].available_samplings) == 0:
-            files = list_available_sampling_files(ip)
-            for file in files:
-                timestamp = extract_timestamp(file)
-                AVAILABLE_SAMPLINGS.add(timestamp)
-                FOUND_DEVICES[hostname].available_samplings.setdefault(timestamp, set()).add(file)
+            if len(FOUND_DEVICES[hostname].available_samplings) == 0:
+                files = list_available_sampling_files(ip)
+                for file in files:
+                    timestamp = extract_timestamp(file)
+                    AVAILABLE_SAMPLINGS.add(timestamp)
+                    FOUND_DEVICES[hostname].available_samplings.setdefault(timestamp, set()).add(file)
+    except Exception as e:
+        print("An error occurred! Try again...")
+        print(e)
 
-    print(f"[✓] Discovered {len(FOUND_DEVICES)} device(s).")
 
-
-def download_by_timestamp_flow():
-    selected = questionary.select(
-        "Select a timestamp to download and merge files for:",
-        choices=list(AVAILABLE_SAMPLINGS)
-    ).ask()
-
-    if not selected:
-        print("[!] No timestamp selected.")
-        return
-
+def download_by_timestamp(timestamp, validate_download):
     for hostname, device in FOUND_DEVICES.items():
-        files = device.available_samplings.get(selected, set())
+        files = device.available_samplings.get(timestamp, set())
         for file in files:
             unit_mac = device.hostname.split("-")[1]
-            download_file(device.ip, unit_mac, file)
+            download_file(device.ip, unit_mac, file, validate_download)
+    merge_files(timestamp)
 
-    merge_files(selected)
+
+def download_all_samplings_flow(validate_download):
+    for timestamp in AVAILABLE_SAMPLINGS:
+        download_by_timestamp(timestamp, validate_download)
+
+
+def list_by_timestamp_flow():
+    try:
+        choices = [
+            Choice(title="All samplings", value="all")
+        ]
+
+        for ts in sorted(AVAILABLE_SAMPLINGS):
+            try:
+                dt = datetime.fromtimestamp(int(ts))
+                label = dt.strftime("%Y-%m-%d %H:%M:%S") + f" ({ts})"
+                choices.append(Choice(title=label, value=str(ts)))
+            except Exception as e:
+                print(f"[!] Skipped invalid timestamp {ts}: {e}")
+
+        selected = questionary.select(
+            "Select a sampling to download:",
+            choices=choices
+        ).ask()
+
+        if not selected:
+            print("[!] No sampling selected.")
+            return
+
+        selected_validate = questionary.select(
+            "Validate files after download?",
+            choices=["Yes (Slower, recommended)", "No (Faster)"]
+        ).ask()
+        validate_download = True if selected_validate == "Yes (Slower, recommended)" else False
+
+        if selected == "all":
+            download_all_samplings_flow(validate_download)
+        else:
+            download_by_timestamp(selected, validate_download)
+
+    except Exception as e:
+        print("An error occurred! Try again...")
+        print(e)
 
 
 def main():
     while True:
+        print("Scanning for available devices, this can take a few minutes...")
+        scan_devices_flow()
+        choice = questionary.select(
+            f"Discovered {len(FOUND_DEVICES)} device(s)."
+            f" Does this match the number of the sampling units in your system?",
+            choices=[
+                "Yes",
+                "No (Rescan)"
+            ]
+        ).ask()
+        if choice == "Yes":
+            break
+
+    while True:
         choice = questionary.select(
             "Choose an operation:",
             choices=[
-                "Scan for devices",
-                "List samplings and download",
+                "List available samplings and download",
                 "Exit"
             ]
         ).ask()
 
-        if choice == "Scan for devices":
-            try:
-                scan_devices_flow()
-            except Exception as e:
-                print(e)
-                while True:
-                    time.sleep(500)
-
-        elif choice == "List samplings and download":
-            download_by_timestamp_flow()
-
+        if choice == "List available samplings and download":
+            list_by_timestamp_flow()
         elif choice == "Exit":
-            print("Goodbye!")
             break
 
         print("\n" + "-" * 40 + "\n")
