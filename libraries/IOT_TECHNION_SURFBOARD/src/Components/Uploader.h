@@ -48,7 +48,7 @@ public:
       Logger::getInstance()->debug("mDNS services registered.");
     }
 
-    server.on("/list", HTTP_GET, [this](AsyncWebServerRequest *request){
+    server.on("/samplings/list", HTTP_GET, [this](AsyncWebServerRequest *request){
       Logger::getInstance()->info("Received request to /list");
       std::vector<std::string> files = sd->listFilesInDir("/samplings");
       String json = "{\"files\":[";
@@ -154,11 +154,17 @@ public:
       }
     });
 
-    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
-      String status = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
-      String json = "{\"status\":\"" + status + "\"}";
-      Logger::getInstance()->debug("Responding to /status with: " + std::string(json.c_str()));
-      request->send(200, "application/json", json);
+    server.on("/samplings/delete", HTTP_POST, [this](AsyncWebServerRequest *request){
+      Logger::getInstance()->info("Received request to delete all files in /samplings");
+      bool success = sd->deleteAllFilesInDir("/samplings");
+      if (success) {
+        md5Cache.clear();
+        Logger::getInstance()->debug("All files deleted successfully.");
+        request->send(200, "application/json", "{\"status\":\"All files deleted\"}");
+      } else {
+        Logger::getInstance()->error("Failed to delete all files.");
+        request->send(500, "application/json", "{\"error\":\"Failed to delete files\"}");
+      }
     });
 
     server.begin();

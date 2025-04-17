@@ -1,6 +1,11 @@
 #include "SDCardHandler.h"
 #include <MD5Builder.h>
 
+//#include <string>
+//#include <fstream>
+//#include <sstream>
+//#include <stdexcept>
+
 SDCardHandler::SDCardHandler(const uint8_t SDCardChipSelectPin, Logger* logger): SDCardChipSelectPin(SDCardChipSelectPin), logger(logger){}
 
 void SDCardHandler::init(){
@@ -13,8 +18,8 @@ void SDCardHandler::init(){
     logger->info("SD card initialized successfully.");
 }
 
-void SDCardHandler::deleteFile(String filePath){
-    SD.remove(filePath);
+bool SDCardHandler::deleteFile(String filePath){
+    return SD.remove(filePath);
 }
 
 void SDCardHandler::getFolder(String folderPath , File* root){
@@ -76,11 +81,35 @@ SDCardHandler::SDCardFileReader SDCardHandler::readFile(string filePath){
     return reader;
 }
 
-#include <map>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
+bool SDCardHandler::deleteAllFilesInDir(String dirPath) {
+    File dir = SD.open(dirPath);
+    if (!dir || !dir.isDirectory()) {
+        logger->error("Directory not found: " + std::string(dirPath.c_str()));
+        return false;
+    }
+
+    File entry = dir.openNextFile();
+    bool success = true;
+
+    while (entry) {
+        String fileName = entry.name();
+        if (!entry.isDirectory()) {
+            String fullPath = dirPath + "/" + fileName;
+            logger->debug("Deleting file: " + std::string(fullPath.c_str()));
+            if (!SD.remove(fullPath)) {
+                logger->error("Failed to delete: " + std::string(fullPath.c_str()));
+                success = false;
+            }
+        }
+        entry.close();
+        entry = dir.openNextFile();
+    }
+
+    dir.close();
+    return success;
+}
+
+
 
 std::map<string, string> SDCardHandler::readConfigFile(string filePath) {
     std::map<std::string, std::string> configMap;

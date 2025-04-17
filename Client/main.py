@@ -1,6 +1,8 @@
 import os
-from datetime import datetime, timezone
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+import traceback
 
 import questionary
 from questionary import Choice
@@ -35,17 +37,19 @@ def scan_devices_flow():
     try:
         found = scan_for_mdns_services()
         for hostname, ip in found.items():
-            if hostname not in FOUND_DEVICES:
-                FOUND_DEVICES[hostname] = ESP32Device(hostname, ip)
-            else:
-                FOUND_DEVICES[hostname].ip = ip
-
-            if len(FOUND_DEVICES[hostname].available_samplings) == 0:
-                files = list_available_sampling_files(ip)
-                for file in files:
-                    timestamp = extract_timestamp(file)
-                    AVAILABLE_SAMPLINGS.add(timestamp)
-                    FOUND_DEVICES[hostname].available_samplings.setdefault(timestamp, set()).add(file)
+            device = ESP32Device(hostname, ip)
+            while True:
+                try:
+                    files = list_available_sampling_files(hostname)
+                    for file in files:
+                        timestamp = extract_timestamp(file)
+                        AVAILABLE_SAMPLINGS.add(timestamp)
+                        device.available_samplings[timestamp] = set(files)
+                        FOUND_DEVICES[hostname] = device
+                    break
+                except Exception as e:
+                    print(f"Failed to get sampling list from device {hostname}. Retrying...")
+                    print(e)
     except Exception as e:
         print("An error occurred! Try again...")
         print(e)
@@ -54,10 +58,8 @@ def scan_devices_flow():
 def download_by_timestamp(timestamp, validate_download):
     def download_for_device(dev):
         files = dev.available_samplings.get(timestamp, set())
-        unit_mac = dev.hostname.split("-")[1]
-
         for file in files:
-            download_file(dev.ip, unit_mac, file, validate_download)
+            download_file(dev.hostname, file, validate_download)
 
     tasks = []
 
@@ -71,6 +73,8 @@ def download_by_timestamp(timestamp, validate_download):
                 future.result()
             except Exception as e:
                 print(f"[!] Device download task failed: {e}")
+                print(traceback.format_exc())
+
 
     merge_files(timestamp)
 
@@ -80,13 +84,31 @@ def download_all_samplings_flow(validate_download):
         download_by_timestamp(timestamp, validate_download)
 
 
+def delete_samplings_flow():
+    try:
+        for _, device in FOUND_DEVICES.items():
+            while True:
+                is_deleted = remove_all_samplings(device.hostname)
+                if is_deleted:
+                    device.available_samplings.clear()
+                    break
+                else:
+                    time.sleep(3)
+            AVAILABLE_SAMPLINGS.clear()
+    except Exception as e:
+        print("An error occurred! Try again...")
+        print(e)
+
+
 def list_by_timestamp_flow():
+    if len(AVAILABLE_SAMPLINGS) == 0:
+        print("No samplings found, try using the device first on sampling mode")
+        return
     try:
         choices = [
             Choice(title="All samplings", value="all")
         ]
-
-        for ts in sorted(AVAILABLE_SAMPLINGS):
+        for ts in reversed(sorted(AVAILABLE_SAMPLINGS)):
             try:
                 dt = datetime.fromtimestamp(int(ts))
                 label = dt.strftime("%Y-%m-%d %H:%M:%S") + f" ({ts})"
@@ -103,16 +125,10 @@ def list_by_timestamp_flow():
             print("[!] No sampling selected.")
             return
 
-        selected_validate = questionary.select(
-            "Validate files after download?",
-            choices=["Yes (Slower, recommended)", "No (Faster)"]
-        ).ask()
-        validate_download = True if selected_validate == "Yes (Slower, recommended)" else False
-
         if selected == "all":
-            download_all_samplings_flow(validate_download)
+            download_all_samplings_flow(True)
         else:
-            download_by_timestamp(selected, validate_download)
+            download_by_timestamp(selected, True)
 
     except Exception as e:
         print("An error occurred! Try again...")
@@ -120,31 +136,23 @@ def list_by_timestamp_flow():
 
 
 def main():
-    while True:
-        print("Scanning for available devices, this can take a few minutes...")
-        scan_devices_flow()
-        choice = questionary.select(
-            f"Discovered {len(FOUND_DEVICES)} device(s)."
-            f" Does this match the number of the sampling units in your system?",
-            choices=[
-                "Yes",
-                "No (Rescan)"
-            ]
-        ).ask()
-        if choice == "Yes":
-            break
-
+    print("Scanning for available devices, this can take a few minutes...")
+    scan_devices_flow()
+    print(f"Discovered {len(FOUND_DEVICES)} device(s).")
     while True:
         choice = questionary.select(
             "Choose an operation:",
             choices=[
                 "List available samplings and download",
+                "Remove samplings from ESP32 devices",
                 "Exit"
             ]
         ).ask()
 
         if choice == "List available samplings and download":
             list_by_timestamp_flow()
+        elif choice == "Remove samplings from ESP32 devices":
+            delete_samplings_flow()
         elif choice == "Exit":
             break
 

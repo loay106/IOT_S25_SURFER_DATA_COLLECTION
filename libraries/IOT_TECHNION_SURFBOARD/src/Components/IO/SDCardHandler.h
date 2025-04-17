@@ -37,7 +37,8 @@ class SDCardHandler{
         }
         void createFolder(string folderName);
         void createFile(string filePath);
-        void deleteFile(String filePath);
+        bool deleteFile(String filePath);
+        bool deleteAllFilesInDir(String dirPath);
         void writeData(string filePath,const char* data);
         bool exists(String& path);
         fs::FS* getFS();

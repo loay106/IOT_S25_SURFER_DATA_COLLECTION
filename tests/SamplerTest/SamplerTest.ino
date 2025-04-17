@@ -7,7 +7,7 @@ Logger* logger;
 SDCardHandler* sdCardHandler;
 Sampler* sampler;
 
-const long SAMPLING_PERIOD_MILLIES = 1800000;
+const long SAMPLING_PERIOD_MILLIES = 5000;
 int startTimeMillis;
 
 void setup() {
@@ -40,7 +40,7 @@ void setup() {
   sampler->addSensor(mock4);
 
   startTimeMillis = millis();
-  sampler->startSampling(1744823385);
+  sampler->startSampling(rand());
 }
 
 void loop() {
