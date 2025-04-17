@@ -10,7 +10,8 @@ def extract_role_and_mac(hostname: str):
     if match:
         role = match.group(1)
         mac = match.group(2)
-        return role, mac
+        is_main = True if role == "main" else False
+        return is_main, mac
     else:
         return None, None
 

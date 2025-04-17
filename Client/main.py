@@ -13,10 +13,12 @@ from utils import *
 
 
 class ESP32Device:
-    def __init__(self, hostname, ip, role, mac_address):
+    def __init__(self, hostname, ip, is_main, mac_address):
         self.hostname = hostname
         self.ip = ip
         self.available_samplings: dict[str, set[str]] = {}
+        self.is_main = is_main
+        self.mac_address = mac_address
 
 
 FOUND_DEVICES: dict[str, ESP32Device] = {}
@@ -27,23 +29,24 @@ def scan_devices_flow():
     try:
         found = scan_for_mdns_services()
         for hostname, ip in found.items():
-            role, mac_address = extract_role_and_mac(hostname)
-            if role is None or mac_address is None:
+            is_main, mac_address = extract_role_and_mac(hostname)
+            if is_main is None or mac_address is None:
                 print(f"{hostname} doesn't match the expected format for the surfboard collector device, skipping...")
                 continue
-            device = ESP32Device(hostname, ip, role, mac_address)
-            while True:
-                try:
-                    files = list_available_sampling_files(hostname)
-                    for file in files:
-                        timestamp = extract_timestamp(file)
-                        AVAILABLE_SAMPLINGS.add(timestamp)
-                        device.available_samplings[timestamp] = set(files)
-                        FOUND_DEVICES[hostname] = device
-                    break
-                except Exception as e:
-                    print(f"Failed to get sampling list from device {hostname}. Retrying...")
-                    print(e)
+            if hostname not in FOUND_DEVICES:
+                device = ESP32Device(hostname, ip, is_main, mac_address)
+                while True:
+                    try:
+                        files = list_available_sampling_files(hostname)
+                        for file in files:
+                            timestamp = extract_timestamp(file)
+                            AVAILABLE_SAMPLINGS.add(timestamp)
+                            device.available_samplings[timestamp] = set(files)
+                            FOUND_DEVICES[hostname] = device
+                        break
+                    except Exception as e:
+                        print(f"Failed to get sampling list from device {hostname}. Retrying...")
+                        print(e)
     except Exception as e:
         print("An error occurred! Try again...")
         print(e)
@@ -129,17 +132,30 @@ def list_by_timestamp_flow():
 
 
 def main():
-    print("Scanning for available devices, this can take a few minutes...")
-    scan_devices_flow()
-    if len(FOUND_DEVICES) == 0:
-        print("No devices were discovered")
-        print("Make sure the devices are running on the same network (Wifi) "
-              f"and/or the client has access to the local networks then run the script again")
-        print("Exiting...")
-        time.sleep(10)
-        return
-
-    print(f"Discovered {len(FOUND_DEVICES)} device(s).")
+    while True:
+        print("Scanning for available devices, this can take a few minutes...")
+        scan_devices_flow()
+        if len(FOUND_DEVICES) == 0:
+            print("No devices were discovered")
+            print("Make sure the devices are running on the same network (Wifi) "
+                  f"and/or the client has access to the local networks then run the script again")
+            time.sleep(5)
+        else:
+            print(f"Discovered {len(FOUND_DEVICES)} device(s).")
+            choice = questionary.select(
+                "Does the number of discovered units match the desired units you want to download from?",
+                choices=[
+                    "Yes, continue",
+                    "No, rescan",
+                    "Exit"
+                ]
+            ).ask()
+            if choice == "Yes, continue":
+                break
+            elif choice == "No, rescan":
+                continue
+            elif choice == "Exit":
+                return
     while True:
         choice = questionary.select(
             "Choose an operation:",
