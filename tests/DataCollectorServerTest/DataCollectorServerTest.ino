@@ -28,7 +28,7 @@ void setup() {
   wifi->connect();
 
   // Start uploader with MAC as identifier
-  String macId = "12345";
+  String macId = "CC_D8_A7_5A_7F_CO";
   server = new DataCollectorServer(sdCardHandler, macId, false);
   server->begin();
 

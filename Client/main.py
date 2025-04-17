@@ -136,10 +136,11 @@ def main():
         print("Scanning for available devices, this can take a few minutes...")
         scan_devices_flow()
         if len(FOUND_DEVICES) == 0:
-            print("No devices were discovered")
+            print("No devices were discovered!")
             print("Make sure the devices are running on the same network (Wifi) "
-                  f"and/or the client has access to the local networks then run the script again")
-            time.sleep(5)
+                  f"and/or the client has access to the local network")
+            print("Rescanning...")
+            time.sleep(10)
         else:
             print(f"Discovered {len(FOUND_DEVICES)} device(s).")
             choice = questionary.select(

@@ -5,7 +5,7 @@ __all__ = ['extract_role_and_mac', 'extract_timestamp']
 
 
 def extract_role_and_mac(hostname: str):
-    pattern = r"^esp32-data-collector-([a-zA-Z0-9]+)-([a-fA-F0-9\.]+)$"
+    pattern = r"^esp32-data-collector-([a-zA-Z0-9]+)-([a-zA-Z0-9_]+)$"
     match = re.match(pattern, hostname)
     if match:
         role = match.group(1)
