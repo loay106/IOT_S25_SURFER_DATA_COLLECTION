@@ -1,8 +1,7 @@
-import os
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-import traceback
 
 import questionary
 from questionary import Choice
@@ -10,10 +9,11 @@ from questionary import Choice
 from device_scanner import *
 from files_downloader import *
 from files_merger import *
+from utils import *
 
 
 class ESP32Device:
-    def __init__(self, hostname, ip):
+    def __init__(self, hostname, ip, role, mac_address):
         self.hostname = hostname
         self.ip = ip
         self.available_samplings: dict[str, set[str]] = {}
@@ -23,21 +23,15 @@ FOUND_DEVICES: dict[str, ESP32Device] = {}
 AVAILABLE_SAMPLINGS: set[str] = set()
 
 
-def extract_timestamp(filename):
-    # Expects filename format: /samplings/1481765933_0_Mock-HX711
-    try:
-        base = os.path.basename(filename)
-        parts = base.split("_")
-        return parts[0] if len(parts) >= 3 else None
-    except Exception:
-        return None
-
-
 def scan_devices_flow():
     try:
         found = scan_for_mdns_services()
         for hostname, ip in found.items():
-            device = ESP32Device(hostname, ip)
+            role, mac_address = extract_role_and_mac(hostname)
+            if role is None or mac_address is None:
+                print(f"{hostname} doesn't match the expected format for the surfboard collector device, skipping...")
+                continue
+            device = ESP32Device(hostname, ip, role, mac_address)
             while True:
                 try:
                     files = list_available_sampling_files(hostname)
@@ -74,7 +68,6 @@ def download_by_timestamp(timestamp, validate_download):
             except Exception as e:
                 print(f"[!] Device download task failed: {e}")
                 print(traceback.format_exc())
-
 
     merge_files(timestamp)
 
