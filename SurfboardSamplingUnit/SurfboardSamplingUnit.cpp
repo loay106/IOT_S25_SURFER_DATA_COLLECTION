@@ -136,7 +136,7 @@ void SurfboardSamplingUnit::loopFileUpload(){
 void SurfboardSamplingUnit::reportStatus(SamplingUnitStatusMessage status_message , bool force ){
     unsigned long currentTime = millis(); 
     SamplerStatus currentStatus = sampler->getStatus();
-    if ( (currentTime - lastStatusReportTime >= REPORT_STATUS_INTERVAL_MILLIS) || force ) 
+    if ( (currentTime - lastStatusReportTime >= STATUS_REPORT_DELAY_MILLIS) || force ) 
     {
         syncManager->reportStatus(status_message);
         lastStatusReportTime = currentTime;     

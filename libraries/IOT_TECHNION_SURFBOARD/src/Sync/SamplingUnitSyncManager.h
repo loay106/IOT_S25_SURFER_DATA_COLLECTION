@@ -42,6 +42,7 @@ class SamplingUnitSyncManager {
         void connect();
         void disconnect();
         void reportStatus(SamplingUnitStatusMessage status);
+        static setNextCommand(CommandMessage cmd);
 
         CommandMessage getNextCommand();
 

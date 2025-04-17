@@ -66,7 +66,9 @@ void setup() {
     ButtonHandler* buttonHandler = new ButtonHandler(logger, buttonPin);
 
     Sampler* sampler = new Sampler(logger, sdCardHandler);
-    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler);
+    String ownMacAddress = wifiHandler->getMacAddress().c_char();
+    DataCollectorServer* server = new DataCollectorServer(sdCardHandler, ownMacAddress, true);
+    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, WIFI_SSID, WIFI_PASSWORD, server);
 
     // declare sensors here....
     Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);
@@ -74,11 +76,11 @@ void setup() {
 
     try{
         // don't change the order of the init
-        syncManager->init(samplingUnitsMacAddresses, 1, 0);
+        syncManager->init(samplingUnitsMacAddresses, 0, 0);
         timeHandler->init();
         buttonHandler->init();
         sampler->init();
-        mainUnit->init(samplingUnitsMacAddresses, 1);
+        mainUnit->init(samplingUnitsMacAddresses, 0);
 
         // init sensors here..
         // you can pass params from the config file
@@ -94,17 +96,20 @@ void setup() {
     mainUnit->addSensor(mock_force_0);
     mainUnit->addSensor(mock_force_1);
 
-    try{
-        syncManager->connect();
-    }catch(ESPNowSyncError& err){
-        while(true){delay(500);};
+    while(true){
+      try{
+          syncManager->connect();
+      }catch(ESPNowSyncError& err){
+          logger->info("Failed to connect to esp-now!");
+          while(true){delay(500);};
+      }
     }
+
     logger->info("System init complete!");
 }
 
 void loop() {
     try{  
-       // logger->info("LOOPING");
         mainUnit->handleButtonPress();
         mainUnit->readStatusUpdateMessages();
         mainUnit->loopDiscoverDisconnected();

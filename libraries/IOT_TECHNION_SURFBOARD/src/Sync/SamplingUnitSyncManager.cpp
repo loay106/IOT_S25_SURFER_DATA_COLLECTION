@@ -7,9 +7,7 @@ Logger* SamplingUnitSyncManager::logger = Logger::getInstance();
 void SamplingUnitSyncManager::onDataReceivedCallback(const uint8_t *mac_addr, const uint8_t *incomingData, int len){
     try{
         CommandMessage cmd = deserializeCommand(incomingData, len);
-        SamplingUnitSyncManager::nextCommand = new CommandMessage();
-        SamplingUnitSyncManager::nextCommand->command = cmd.command;
-        SamplingUnitSyncManager::nextCommand->params = cmd.params;
+        SamplingUnitSyncManager::setNextCommand(cmd);
     }catch(InvalidSyncMessage& err){
         SamplingUnitSyncManager::logger->error("Invalid command message received!");
         return;
@@ -54,6 +52,14 @@ void SamplingUnitSyncManager::reportStatus(SamplingUnitStatusMessage status){
     if (result != ESP_OK) {
         SamplingUnitSyncManager::logger->error("Failed to report status!");
     }
+}
+
+SamplingUnitSyncManager::setNextCommand(CommandMessage cmd){
+    // todo: use lock here and in getNextCommand?
+    delete SamplingUnitSyncManager::nextCommand;
+    SamplingUnitSyncManager::nextCommand = new CommandMessage();
+    SamplingUnitSyncManager::nextCommand->command = cmd.command;
+    SamplingUnitSyncManager::nextCommand->params = cmd.params;
 }
 
 CommandMessage SamplingUnitSyncManager::getNextCommand(){

@@ -1,6 +1,7 @@
 #include "SurfboardMainUnit.h"
+#include <HTTPClient.h>
 
-SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager *syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler *buttonHandler, Logger *logger, Sampler* sampler, SDCardHandler* sdCardHandler){
+SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager *syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler *buttonHandler, Logger *logger, Sampler* sampler, SDCardHandler* sdCardHandler,WifiHandler* wifiHandler, string _wifi_ssid, string _wifi_password, DataCollectorServer* server){
     this->logger = logger;
     this->syncManager = syncManager;
     this->timeHandler = timeHandler;
@@ -9,7 +10,10 @@ SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager *syncManager, RTCTim
     this->logger = logger;
     this->sampler = sampler;
     this->sdCardHandler = sdCardHandler;
-    this->uploadStartTime = 0;
+    this->WIFI_SSID = _wifi_ssid;
+    this->WIFI_PASSWORD = _wifi_password;
+    this->wifiHandler = wifiHandler;
+    this->server = server;
     status = SystemStatus::SYSTEM_STARTING;
     currentSamplingSession = 0;
 }
@@ -20,11 +24,10 @@ void SurfboardMainUnit::init(uint8_t samplingUnitsAdresses[][6], int samplingUni
         SamplingUnitRep samplingUnit;
         memcpy(samplingUnit.mac, samplingUnitsAdresses[i], 6);
         samplingUnit.status = SamplerStatus::UNIT_STAND_BY;
-        samplingUnit.hasFilesToUpload = false;
         samplingUnit.lastCommandSentMillis = 0;
         samplingUnit.lastStatusUpdateMillis = 0;
         string macString = macToString(samplingUnit.mac);
-        samplingUnit.mDNSHostname = getHostname(macString.c_str(), false);
+        samplingUnit.mDNSHostname = getHostname(macString.c_str(), false) + ".local";
         samplingUnits[macString] = samplingUnit;
     }
     syncManager->connect();
@@ -68,6 +71,15 @@ void SurfboardMainUnit::addSensor(SensorBase* sensor) {
 }
 
 void SurfboardMainUnit::startSampling() {
+    if(wifiHandler->isConnected()){
+        wifiHandler->disconnect();
+        delay(500);
+    }
+    if(!syncManager->isESPNowConnected()){
+        syncManager->connect();
+        delay(300);
+    }
+
     currentSamplingSession = timeHandler->getCurrentTimestamp();
     std::map<string, string> samplingParams;
     samplingParams["TIMESTAMP"] = to_string(currentSamplingSession);
@@ -80,7 +92,6 @@ void SurfboardMainUnit::startSampling() {
     unsigned long current = millis();
     std::map<string, SamplingUnitRep>::iterator it;
     for (it=samplingUnits.begin(); it!=samplingUnits.end(); it++) {
-      it->second.hasFilesToUpload = true;
       it->second.lastCommandSentMillis = current;
     }
     sampler->startSampling(currentSamplingSession);
@@ -89,6 +100,14 @@ void SurfboardMainUnit::startSampling() {
 }
 
 void SurfboardMainUnit::stopSampling() {
+    if(wifiHandler->isConnected()){
+        wifiHandler->disconnect();
+        delay(500);
+    }
+    if(!syncManager->isESPNowConnected()){
+        syncManager->connect();
+        delay(300);
+    }
     try{
         std::map<string, string> params;
         syncManager->broadcastCommand(ControlUnitCommand::STOP_SAMPLING, params);
@@ -105,37 +124,91 @@ void SurfboardMainUnit::stopSampling() {
 }
 
 void SurfboardMainUnit::startSampleFilesUpload() {
-    try{
-        // todo: add wifi ssid + password to params
-        std::map<string, string> params;
-        syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
-    }catch(ESPNowSyncError& error){
-        logger->error("Failed to send command to sampling units! Try again!");
-        return;
+    updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STARTING);
+    logger->info("File upload starting...");
+    if(wifiHandler->isConnected()){
+        wifiHandler->disconnect();
+        delay(500);
+    }
+    if(!syncManager->isESPNowConnected()){
+        syncManager->connect();
+        delay(300);
     }
 
-    logger->info("File upload started!");
+    std::map<string, string> params;
+    params["WIFI_SSID"] = WIFI_SSID;
+    params["WIFI_PASSWORD"] = WIFI_PASSWORD;
+    for(int i=0; i<3; i++){
+        // try broadcasting 3 times to incrase the chances of units not messing the message
+        try{
+            syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
+        }catch(ESPNowSyncError& error){
+            logger->error("Failed to send command to sampling units! Try again!");
+        }
+    }
+
+
+
     unsigned long current = millis();
     std::map<string, SamplingUnitRep>::iterator it;
     for (it=samplingUnits.begin(); it!=samplingUnits.end(); it++) {
       it->second.lastCommandSentMillis = current;
     }
-    uploadStartTime = 0;
+    delay(200); // give some time for units to respond
+    // todo: start web server here
+    if(syncManager->isESPNowConnected()){
+        syncManager->disconnect();
+    }
+    if(!wifiHandler->isConnected()){
+        wifiHandler->connect();
+    }
+    server->begin();
+    logger->info("File upload started!");
     updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
 }
 
+bool sendStopUploadToSamplingUnitDataServer(String hostname){
+    if(!wifiHandler->isConnected()){
+      return false;
+    }
+    String url = "http://" + hostname + "/stop";
+    HTTPClient http;
+    http.begin(url);
+    http.setTimeout(5);
+    Logger::getInstance()->info(string("Sending stop upload to host " + hostname));
+    int httpCode = http.POST();
+    http.end();
+
+    if(httpCode == 204){
+      Logger::getInstance()->info(hostname + " received command correctly!");
+      return true;
+    }else{
+      Logger::getInstance()->error("Failed to send command stop uploading to unit " + hostname);
+      return false;
+    }
+}
+
 void SurfboardMainUnit::stopSampleFilesUpload() {
-    // todo: send command using wifi to hostnames
+    updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING);
+    logger->info("Stopping file upload...");
+    if(syncManager->isESPNowConnected()){
+        syncManager->disconnect();
+    }
+    if(!wifiHandler->isConnected()){
+        wifiHandler->connect();
+        return;
+    }
+
+    // wifi connected here
 
     unsigned long current = millis();
     std::map<string, SamplingUnitRep>::iterator it;
     for (it=samplingUnits.begin(); it!=samplingUnits.end(); it++) {
-      it->second.lastCommandSentMillis = current;
+
+        it->second.lastCommandSentMillis = current;
     }
     // todo: 
     updateStatus(SystemStatus::SYSTEM_STAND_BY);
-    unsigned long elapsedTime = (current - uploadStartTime)/1000;
-    logger->info("File upload stopped! Process ended in " + to_string(elapsedTime) + " seconds");
 }
 
 SystemStatus SurfboardMainUnit::getStatus(){
@@ -153,7 +226,6 @@ void SurfboardMainUnit::handleButtonPress(){
                 stopSampling();
                 break;
             case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
-            case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_PARTIAL_ERROR:
                 logger->debug("Soft or long press detected while file uploading");
                 stopSampleFilesUpload();
                 break;
@@ -192,11 +264,6 @@ void SurfboardMainUnit::readStatusUpdateMessages(){
                   logger->info("Unit " + unitID + " reported SAMPLING FILE UPLOADING");
                   samplingUnit.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
                   break;
-                case SamplingUnitStatusMessage::SAMPLE_FILES_UPLOAD_COMPLETE:
-                  logger->info("Unit " + unitID + " reported SAMPLING FILE UPLOAD COMPLETED!");
-                  samplingUnit.hasFilesToUpload = false;
-                  samplingUnit.status = SamplerStatus::UNIT_STAND_BY;
-                  break;
                 case SamplingUnitStatusMessage::ERROR:
                   logger->info("Unit " + unitID + " reported ERROR");
                   samplingUnit.status = SamplerStatus::UNIT_ERROR;
@@ -211,6 +278,14 @@ void SurfboardMainUnit::readStatusUpdateMessages(){
 }
 
 void SurfboardMainUnit::sendCommand(SamplingUnitRep& unit, ControlUnitCommand command){
+    if(wifiHandler->isConnected()){
+        wifiHandler->disconnect();
+        delay(500);
+    }
+    if(!syncManager->isESPNowConnected()){
+        syncManager->connect();
+        delay(300);
+    }
     unsigned long current = millis();
     if((current - unit.lastCommandSentMillis) < COMMAND_SEND_MIN_INTERVAL_MILLIS){
         return;
@@ -243,9 +318,42 @@ void SurfboardMainUnit::sendCommand(SamplingUnitRep& unit, ControlUnitCommand co
     } 
 }
 
-void SurfboardMainUnit::loopFileUpload(){
+bool pingSamplingUnitDataServer(String hostname){
+    if(!wifiHandler->isConnected()){
+      return false;
+    }
+    String url = "http://" + hostname + "/ping";
+    HTTPClient http;
+    http.begin(url);
+    http.setTimeout(5);
+    Logger::getInstance()->info(string("Sending ping to host " + hostname));
+    int httpCode = http.GET();
+    http.end();
 
-    // todo: ping sampling units here to update their status
+    if(httpCode == 204){
+      Logger::getInstance()->info(hostname + " is alive and connected");
+      return true;
+    }else{
+      Logger::getInstance()->error("Failed to ping unit " + hostname);
+      return false;
+    }
+}
+ 
+
+void SurfboardMainUnit::loopFileUpload(){
+    unsigned long current = millis();
+    std::map<string, SamplingUnitRep>::iterator it;
+    for (it=samplingUnits.begin(); it!=samplingUnits.end(); it++) {
+        if((current - it->second.lastStatusUpdateMillis) >= STATUS_REPORT_DELAY_MILLIS){
+            bool result = pingSamplingUnitDataServer(it->second.mDNSHostname);
+            if(result){
+                StatusUpdateMessage statusMessage;
+                memcpy(statusMessage.from, it->second.mac, 6);
+                statusMessage.status = SamplingUnitStatusMessage::SAMPLE_FILES_UPLOAD;
+                syncManager->addStatusUpdateMessage()
+            }
+        }
+    }
 }
 
 void SurfboardMainUnit::loopSampling(){

@@ -32,12 +32,12 @@ class SurfboardMainUnit {
         Logger* logger;
         Sampler* sampler; // internal sampler
         SDCardHandler* sdCardHandler;
-        int currentSamplingSession;
-        unsigned long uploadStartTime;
-
-        
-
+        unsigned long currentSamplingSession;
         SystemStatus status;
+        WifiHandler* wifiHandler;
+        string WIFI_SSID;
+        string WIFI_PASSWORD;
+        DataCollectorServer* server;
 
         void updateStatus(SystemStatus newStatus);
 
@@ -49,7 +49,7 @@ class SurfboardMainUnit {
 
         void sendCommand(SamplingUnitRep& unit, ControlUnitCommand command);
     public:
-        SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler);
+        SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WifiHandler* wifiHandler, string _wifi_ssid, string _wifi_password, DataCollectorServer* server);
         void init(uint8_t samplingUnitsAdresses[][6], int samplingUnitsNum);
         void addSensor(SensorBase* sensor);
 
