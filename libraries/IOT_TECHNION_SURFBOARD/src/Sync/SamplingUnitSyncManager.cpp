@@ -54,7 +54,7 @@ void SamplingUnitSyncManager::reportStatus(SamplingUnitStatusMessage status){
     }
 }
 
-SamplingUnitSyncManager::setNextCommand(CommandMessage cmd){
+void SamplingUnitSyncManager::setNextCommand(CommandMessage cmd){
     // todo: use lock here and in getNextCommand?
     delete SamplingUnitSyncManager::nextCommand;
     SamplingUnitSyncManager::nextCommand = new CommandMessage();

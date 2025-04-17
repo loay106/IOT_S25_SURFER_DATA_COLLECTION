@@ -19,7 +19,6 @@ SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager *syncManager, RTCTim
 }
 
 void SurfboardMainUnit::init(uint8_t samplingUnitsAdresses[][6], int samplingUnitsNum) {
-    // add sampling units
     for(int i=0;i<samplingUnitsNum;i++){
         SamplingUnitRep samplingUnit;
         memcpy(samplingUnit.mac, samplingUnitsAdresses[i], 6);
@@ -147,15 +146,12 @@ void SurfboardMainUnit::startSampleFilesUpload() {
         }
     }
 
-
-
     unsigned long current = millis();
     std::map<string, SamplingUnitRep>::iterator it;
     for (it=samplingUnits.begin(); it!=samplingUnits.end(); it++) {
       it->second.lastCommandSentMillis = current;
     }
     delay(200); // give some time for units to respond
-    // todo: start web server here
     if(syncManager->isESPNowConnected()){
         syncManager->disconnect();
     }
@@ -167,7 +163,7 @@ void SurfboardMainUnit::startSampleFilesUpload() {
     updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
 }
 
-bool sendStopUploadToSamplingUnitDataServer(String hostname){
+bool SurfboardMainUnit::sendStopUploadToSamplingUnitDataServer(String hostname){
     if(!wifiHandler->isConnected()){
       return false;
     }
@@ -175,15 +171,15 @@ bool sendStopUploadToSamplingUnitDataServer(String hostname){
     HTTPClient http;
     http.begin(url);
     http.setTimeout(5);
-    Logger::getInstance()->info(string("Sending stop upload to host " + hostname));
-    int httpCode = http.POST();
+    logger->info(string("Sending stop upload to host ") + hostname.c_str());
+    int httpCode = http.POST("");
     http.end();
 
     if(httpCode == 204){
-      Logger::getInstance()->info(hostname + " received command correctly!");
+      logger->info(string(hostname.c_str()) + " received command correctly!");
       return true;
     }else{
-      Logger::getInstance()->error("Failed to send command stop uploading to unit " + hostname);
+      logger->error(string("Failed to send command stop uploading to unit ") + hostname.c_str());
       return false;
     }
 }
@@ -193,21 +189,21 @@ void SurfboardMainUnit::stopSampleFilesUpload() {
     logger->info("Stopping file upload...");
     if(syncManager->isESPNowConnected()){
         syncManager->disconnect();
+        delay(300);
     }
     if(!wifiHandler->isConnected()){
         wifiHandler->connect();
-        return;
+        delay(500);
     }
-
-    // wifi connected here
-
     unsigned long current = millis();
     std::map<string, SamplingUnitRep>::iterator it;
     for (it=samplingUnits.begin(); it!=samplingUnits.end(); it++) {
-
-        it->second.lastCommandSentMillis = current;
+        bool result = sendStopUploadToSamplingUnitDataServer(it->second.mDNSHostname);
+        if(result){
+            it->second.lastCommandSentMillis = current;
+            it->second.status = SamplerStatus::UNIT_STAND_BY;
+        } 
     }
-    // todo: 
     updateStatus(SystemStatus::SYSTEM_STAND_BY);
 }
 
@@ -318,7 +314,7 @@ void SurfboardMainUnit::sendCommand(SamplingUnitRep& unit, ControlUnitCommand co
     } 
 }
 
-bool pingSamplingUnitDataServer(String hostname){
+bool SurfboardMainUnit::pingSamplingUnitDataServer(String hostname){
     if(!wifiHandler->isConnected()){
       return false;
     }
@@ -326,15 +322,15 @@ bool pingSamplingUnitDataServer(String hostname){
     HTTPClient http;
     http.begin(url);
     http.setTimeout(5);
-    Logger::getInstance()->info(string("Sending ping to host " + hostname));
+    logger->info(string("Sending ping to host ") + hostname.c_str());
     int httpCode = http.GET();
     http.end();
 
     if(httpCode == 204){
-      Logger::getInstance()->info(hostname + " is alive and connected");
+      logger->info(string(hostname.c_str()) + " is alive and connected");
       return true;
     }else{
-      Logger::getInstance()->error("Failed to ping unit " + hostname);
+      logger->error(string("Failed to ping unit ") + hostname.c_str());
       return false;
     }
 }
@@ -350,7 +346,7 @@ void SurfboardMainUnit::loopFileUpload(){
                 StatusUpdateMessage statusMessage;
                 memcpy(statusMessage.from, it->second.mac, 6);
                 statusMessage.status = SamplingUnitStatusMessage::SAMPLE_FILES_UPLOAD;
-                syncManager->addStatusUpdateMessage()
+                syncManager->addStatusUpdateMessage(statusMessage);
             }
         }
     }

@@ -3,6 +3,7 @@
 
 #include "Logger.h"
 #include <WiFi.h>
+#include "../../Utils/Adresses.h"
 
 class WifiHandler {
   private:

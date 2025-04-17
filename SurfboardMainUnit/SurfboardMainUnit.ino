@@ -66,9 +66,9 @@ void setup() {
     ButtonHandler* buttonHandler = new ButtonHandler(logger, buttonPin);
 
     Sampler* sampler = new Sampler(logger, sdCardHandler);
-    String ownMacAddress = wifiHandler->getMacAddress().c_char();
+    String ownMacAddress = wifiHandler->getMacAddress().c_str();
     DataCollectorServer* server = new DataCollectorServer(sdCardHandler, ownMacAddress, true);
-    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, WIFI_SSID, WIFI_PASSWORD, server);
+    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wifiHandler, WIFI_SSID, WIFI_PASSWORD, server);
 
     // declare sensors here....
     Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);

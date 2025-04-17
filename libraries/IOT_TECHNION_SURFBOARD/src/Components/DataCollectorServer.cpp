@@ -1,9 +1,10 @@
 #include "DataCollectorServer.h"
 #include "../Utils/Adresses.h"
 
+bool DataCollectorServer::stopFlag = false;
+
 DataCollectorServer::DataCollectorServer(SDCardHandler *sdHandler, const String &macAddress, bool isMain) : server(80), sd(sdHandler) {
     hostname = getHostname(macAddress, isMain);
-    stopFlag = false;
 }
 
 void DataCollectorServer::begin()
@@ -34,16 +35,6 @@ void DataCollectorServer::begin()
     server.begin();
     serverStarted = true;
     Logger::getInstance()->info("Uploader server started on port 80");
-}
-
-void DataCollectorServer::loop(){
-    if (!serverStarted && WiFi.status() == WL_CONNECTED) {
-        if (millis() - lastRetryTime >= retryInterval) {
-          lastRetryTime = millis();
-          Logger::getInstance()->info("Retrying uploader server startup...");
-          begin();
-        }
-    }
 }
 
 bool DataCollectorServer::stopRequestReceived(){
@@ -195,7 +186,7 @@ void DataCollectorServer::expose_ping_endpoint() {
 
 void DataCollectorServer::expose_server_stop_endpoint(){
   server.on("/stop", HTTP_POST, [](AsyncWebServerRequest *request){
-    stopFlag = true;
+    DataCollectorServer::stopFlag = true;
     request->send(204); // No Content
-});
+  });
 }

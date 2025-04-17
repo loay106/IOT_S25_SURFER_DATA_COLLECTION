@@ -48,6 +48,10 @@ class SurfboardMainUnit {
         void stopSampleFilesUpload();
 
         void sendCommand(SamplingUnitRep& unit, ControlUnitCommand command);
+
+        bool sendStopUploadToSamplingUnitDataServer(String hostname);
+        bool pingSamplingUnitDataServer(String hostname);
+        
     public:
         SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WifiHandler* wifiHandler, string _wifi_ssid, string _wifi_password, DataCollectorServer* server);
         void init(uint8_t samplingUnitsAdresses[][6], int samplingUnitsNum);

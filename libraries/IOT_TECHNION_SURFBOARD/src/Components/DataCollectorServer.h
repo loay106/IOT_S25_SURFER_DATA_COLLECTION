@@ -35,7 +35,6 @@ class DataCollectorServer {
     DataCollectorServer(SDCardHandler* sdHandler, const String& macAddress, bool isMain);
 
     void begin();
-    void loop();
     bool stopRequestReceived();
     void stop();
 };
