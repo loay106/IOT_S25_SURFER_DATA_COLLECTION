@@ -2,7 +2,7 @@
 #define IOT_TECHNION_SURFBOARD_H
 
 #include "Components/Sampler.h"
-#include "Components/Uploader.h"
+#include "Components/DataCollectorServer.h"
 #include "Components/IO/ButtonHandler.h"
 #include "Components/IO/RGBStatusHandler.h"
 #include "Components/IO/RTCTimeHandler.h"

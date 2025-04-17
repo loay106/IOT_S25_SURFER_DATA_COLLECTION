@@ -8,7 +8,7 @@ const int serialBaudRate = 115200;
 WifiHandler* wifi;
 Logger* logger;
 SDCardHandler* sdCardHandler; 
-Uploader* uploader;
+DataCollectorServer* server;
 
 // Replace with your Wi-Fi credentials
 const char* ssid = "BEZEQINT-F2A4-2.4G";
@@ -29,8 +29,8 @@ void setup() {
 
   // Start uploader with MAC as identifier
   String macId = "12345";
-  uploader = new Uploader(sdCardHandler, macId);
-  uploader->begin();
+  server = new DataCollectorServer(sdCardHandler, macId, false);
+  server->begin();
 
 }
 
@@ -38,7 +38,7 @@ void loop() {
   if(!wifi->isConnected()){
     wifi->reconnect();
   }else{
-    uploader->loop();
+    server->loop();
     //logger->info(wifi->getIP().c_str());
     delay(500);
   }
