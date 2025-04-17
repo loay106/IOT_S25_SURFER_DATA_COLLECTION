@@ -1,13 +1,8 @@
 #include "DataCollectorServer.h"
+#include "../Utils/Adresses.h"
 
 DataCollectorServer::DataCollectorServer(SDCardHandler *sdHandler, const String &macAddress, bool isMain) : server(80), sd(sdHandler) {
-    String role;
-    if(isMain){
-      role = "main";
-    }else{
-      role = "sampler";
-    }
-    hostname = "esp32-surforboard-collector-" + role + "-" + macAddress;
+    hostname = getHostname(macAddress, isMain);
 }
 
 void DataCollectorServer::begin()

@@ -13,7 +13,7 @@ inline string macToString(uint8_t mac[6]) {
     std::ostringstream macStream;
     for (int i = 0; i < 6; i++) {
         if (i > 0) {
-            macStream << ":";
+            macStream << ".";
         }
         macStream << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(mac[i]);
     }
@@ -25,7 +25,7 @@ inline void stringToMac(const std::string &macString, uint8_t mac[6]) {
     std::string byteStr;
     int i = 0;
 
-    while (std::getline(macStream, byteStr, ':')) {
+    while (std::getline(macStream, byteStr, '.')) {
         if (i >= 6) {
             throw std::invalid_argument("Invalid MAC address format: too many bytes");
         }
@@ -35,6 +35,16 @@ inline void stringToMac(const std::string &macString, uint8_t mac[6]) {
     if (i != 6) {
         throw std::invalid_argument("Invalid MAC address format: not enough bytes");
     }
+}
+
+inline String getHostname(String macAddress, bool isMain){
+    String role;
+    if(isMain){
+      role = "main";
+    }else{
+      role = "sampler";
+    }
+    return "esp32-data-collector-" + role + "-" + macAddress;
 }
 
 #endif /* UTILS_ADDRESSES_H */
