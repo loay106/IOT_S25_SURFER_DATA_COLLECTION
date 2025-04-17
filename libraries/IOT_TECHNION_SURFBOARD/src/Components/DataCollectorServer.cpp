@@ -3,6 +3,7 @@
 
 DataCollectorServer::DataCollectorServer(SDCardHandler *sdHandler, const String &macAddress, bool isMain) : server(80), sd(sdHandler) {
     hostname = getHostname(macAddress, isMain);
+    stopFlag = false;
 }
 
 void DataCollectorServer::begin()
@@ -27,6 +28,8 @@ void DataCollectorServer::begin()
     expose_download_endpoint();
     expose_validate_download_endpoint();
     expose_remove_all_samplings_endpoint();
+    expose_ping_endpoint();
+    expose_server_stop_endpoint();
 
     server.begin();
     serverStarted = true;
@@ -43,11 +46,17 @@ void DataCollectorServer::loop(){
     }
 }
 
+bool DataCollectorServer::stopRequestReceived(){
+    bool flag = stopFlag;
+    return flag;
+}
+
 void DataCollectorServer::stop(){
     if (!serverStarted) return;
     Logger::getInstance()->info("Stopping uploader server...");
     server.end();
     serverStarted = false;
+    stopFlag = false;
     Logger::getInstance()->info("Uploader server stopped.");
 }
 
@@ -178,4 +187,15 @@ void DataCollectorServer::expose_remove_all_samplings_endpoint(){
       });
 }
 
+void DataCollectorServer::expose_ping_endpoint() {
+  server.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->send(204); // No Content
+  });
+}
 
+void DataCollectorServer::expose_server_stop_endpoint(){
+  server.on("/stop", HTTP_POST, [](AsyncWebServerRequest *request){
+    stopFlag = true;
+    request->send(204); // No Content
+});
+}

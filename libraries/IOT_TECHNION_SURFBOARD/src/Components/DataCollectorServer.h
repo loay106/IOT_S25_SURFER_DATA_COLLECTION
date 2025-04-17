@@ -22,17 +22,21 @@ class DataCollectorServer {
     const unsigned long retryInterval = 5000;
     String hostname;
     std::map<std::string, String> md5Cache;
+    static bool stopFlag;
 
     void expose_list_samplings_endpoint();
     void expose_download_endpoint();
     void expose_validate_download_endpoint();
     void expose_remove_all_samplings_endpoint();
+    void expose_ping_endpoint();
+    void expose_server_stop_endpoint();
 
   public:
     DataCollectorServer(SDCardHandler* sdHandler, const String& macAddress, bool isMain);
 
     void begin();
     void loop();
+    bool stopRequestReceived();
     void stop();
 };
 

@@ -10,15 +10,6 @@ using namespace std;
 
 #include <IOT_TECHNION_SURFBOARD.h>
 
-/*
-  todo:
-    1. handle edge cases with wifi/file upload
-    2. fix button press
-    3. finish sampling unit
-    4. test with 1 sampling unit or more
-    5. connect to wifi, get wifi channel and set it for esp now 
-*/
-
 const int COMMAND_SEND_MIN_INTERVAL_MILLIS = 500; 
 const int MAX_STATUS_UPDATE_DELAY = 3000;
 
@@ -28,6 +19,7 @@ typedef struct SamplingUnitRep{
     bool hasFilesToUpload;
     unsigned long lastCommandSentMillis;
     unsigned long lastStatusUpdateMillis;
+    String mDNSHostname;
 } SamplingUnitRep;
 
 class SurfboardMainUnit {
@@ -42,6 +34,8 @@ class SurfboardMainUnit {
         SDCardHandler* sdCardHandler;
         int currentSamplingSession;
         unsigned long uploadStartTime;
+
+        
 
         SystemStatus status;
 

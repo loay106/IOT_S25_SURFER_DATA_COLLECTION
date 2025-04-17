@@ -11,19 +11,15 @@ int RGBBluePin = 27;
 
 int buttonPin = 4;
 
-int MAX_RECOVERY_TRIES = 3;
-
-
 // globals
 SurfboardMainUnit* mainUnit;
 Logger* logger;
 RGBStatusHandler* statusLighthandler;
-int errorRecoveryTries = 0;
 
-uint8_t samplingUnitsMacAddresses[2][6] =  {
-  //  {0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0}, // Loay's esp testing board
-    {0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68}, // Mousa's esp board
-    {0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64} // Shada's esp board
+uint8_t samplingUnitsMacAddresses[1][6] =  {
+    {0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0}, // Loay's esp testing board
+   // {0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68}, // Mousa's esp board
+   // {0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64} // Shada's esp board
 };
 
 void setup() {
@@ -52,7 +48,6 @@ void setup() {
     string WIFI_SSID = "";
     string WIFI_PASSWORD = "";
     vector<string> sensorsParams;
-    int WIFI_ESP_NOW_CHANNEL = 0;
 
     try{
         std::map<string, string> configMap = sdCardHandler->readConfigFile("//unit.config");
@@ -64,44 +59,26 @@ void setup() {
         while(true){delay(500);};
     }
 
-    WifiHandler* wifiHandler = new WifiHandler(WIFI_SSID, WIFI_PASSWORD);
-    while(true){
-        try{
-            logger->info("Checking wifi connection...");
-            wifiHandler->init();
-            wifiHandler->connect();
-            logger->info("Wifi connection established!");
-            WIFI_ESP_NOW_CHANNEL = wifiHandler->getChannel();
-            logger->info("Setting ESP now channel to " + to_string(WIFI_ESP_NOW_CHANNEL));
-            wifiHandler->disconnect();
-            logger->info("Wifi disconnected!");
-            break;
-        }catch(...){
-            logger->error("Wifi connection failed! Please check your wifi ssid and password!");
-            delay(3000);
-        }
-    }
+    WifiHandler* wifiHandler = new WifiHandler(logger, WIFI_SSID.c_str(), WIFI_PASSWORD.c_str());
 
     ControlUnitSyncManager* syncManager = ControlUnitSyncManager::getInstance();
     RTCTimeHandler* timeHandler = new RTCTimeHandler(logger);
     ButtonHandler* buttonHandler = new ButtonHandler(logger, buttonPin);
 
-    CloudSyncManager* cloudSyncManager = new CloudSyncManager(logger, wifiHandler, wifiHandler->getMacAddress());
-    Sampler* sampler = new Sampler(logger, sdCardHandler, cloudSyncManager);
+    Sampler* sampler = new Sampler(logger, sdCardHandler);
     mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler);
 
     // declare sensors here....
-    Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 30);
-    Mock_HX711* mock_force_1 = new Mock_HX711(logger,sdCardHandler, 30);
+    Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);
+    Mock_HX711* mock_force_1 = new Mock_HX711(logger,sdCardHandler, 1000);
 
     try{
         // don't change the order of the init
-        syncManager->init(samplingUnitsMacAddresses, 2, WIFI_ESP_NOW_CHANNEL);
+        syncManager->init(samplingUnitsMacAddresses, 1, 0);
         timeHandler->init();
         buttonHandler->init();
-        cloudSyncManager->init();
         sampler->init();
-        mainUnit->init(samplingUnitsMacAddresses, 2);
+        mainUnit->init(samplingUnitsMacAddresses, 1);
 
         // init sensors here..
         // you can pass params from the config file
@@ -141,12 +118,11 @@ void loop() {
           case SystemStatus::SYSTEM_SAMPLING:
           case SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR:
             mainUnit->loopSampling();
-            delay(3);
             break;
           case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
           case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_PARTIAL_ERROR:
             mainUnit->loopFileUpload();
-            delay(3);
+            delay(5);
             break;
           case SystemStatus::SYSTEM_ERROR: 
             statusLighthandler->updateColors(RGBColors::RED, RGBColors::RED);
