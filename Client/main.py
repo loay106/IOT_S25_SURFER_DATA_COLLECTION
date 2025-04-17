@@ -138,6 +138,14 @@ def list_by_timestamp_flow():
 def main():
     print("Scanning for available devices, this can take a few minutes...")
     scan_devices_flow()
+    if len(FOUND_DEVICES) == 0:
+        print("No devices were discovered")
+        print("Make sure the devices are running on the same network (Wifi) "
+              f"and/or the client has access to the local networks then run the script again")
+        print("Exiting...")
+        time.sleep(10)
+        return
+
     print(f"Discovered {len(FOUND_DEVICES)} device(s).")
     while True:
         choice = questionary.select(
