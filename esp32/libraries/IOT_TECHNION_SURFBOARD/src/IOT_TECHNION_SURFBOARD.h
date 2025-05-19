@@ -14,8 +14,6 @@
 #include "Components/Sensors/Force_HX711.h"
 #include "Components/Sensors/IMU_BNO080.h"
 
-#include "Sync/ControlUnitSyncManager.h"
-#include "Sync/SamplingUnitSyncManager.h"
 #include "Sync/SyncMessages.h"
 #include "Utils/Adresses.h"
 #include "Utils/Exceptions.h"

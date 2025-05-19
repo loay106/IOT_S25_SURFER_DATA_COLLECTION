@@ -21,15 +21,6 @@ class SDCardHandler{
     public:
         SDCardHandler(const uint8_t SDCardChipSelectPin, Logger* logger);
 
-        class SDCardFileReader{
-            private:
-                File file;
-            public:
-                SDCardFileReader(File file);
-                String readNextLine();
-                void close();
-        };
-
         void init();
         void getFolder(String folderPath , File* root);
         File open(const String& path) {
@@ -42,9 +33,6 @@ class SDCardHandler{
         void writeData(string filePath,const char* data);
         bool exists(String& path);
         fs::FS* getFS();
-        String calculateMD5(String& path);
-
-        SDCardHandler::SDCardFileReader readFile(string filePath);
 
         std::map<string, string> readConfigFile(string filePath);
 

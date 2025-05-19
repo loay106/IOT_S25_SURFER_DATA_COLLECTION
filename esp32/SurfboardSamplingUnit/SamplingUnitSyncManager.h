@@ -6,8 +6,7 @@
 #include <string>
 #include <Arduino.h>
 
-#include "../Components/IO/Logger.h"
-#include "SyncMessages.h"
+#include <IOT_TECHNION_SURFBOARD.h>
 
 
 using namespace std;

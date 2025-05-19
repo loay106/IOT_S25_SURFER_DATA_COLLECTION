@@ -11,10 +11,7 @@ using namespace std;
 #include <esp_now.h>
 #include <WiFi.h>
 
-#include "../Utils/Status.h"
-#include "../Components/IO/Logger.h"
-#include "../Utils/Adresses.h"
-#include "SyncMessages.h"
+#include <IOT_TECHNION_SURFBOARD.h>
 
 class ControlUnitSyncManager{
     // singleton class

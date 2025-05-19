@@ -6,6 +6,7 @@
 using namespace std;
 
 #include <IOT_TECHNION_SURFBOARD.h>
+#include "SamplingUnitSyncManager.h"
 
 class SurfboardSamplingUnit {
     private:

@@ -7,8 +7,8 @@
 using namespace std;
 
 #include <Arduino.h>
-
 #include <IOT_TECHNION_SURFBOARD.h>
+#include "ControlUnitSyncManager.h"
 
 const int COMMAND_SEND_MIN_INTERVAL_MILLIS = 500; 
 const int MAX_STATUS_UPDATE_DELAY = 3000;

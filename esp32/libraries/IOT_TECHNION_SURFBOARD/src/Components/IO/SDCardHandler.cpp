@@ -1,10 +1,4 @@
 #include "SDCardHandler.h"
-#include <MD5Builder.h>
-
-//#include <string>
-//#include <fstream>
-//#include <sstream>
-//#include <stdexcept>
 
 SDCardHandler::SDCardHandler(const uint8_t SDCardChipSelectPin, Logger* logger): SDCardChipSelectPin(SDCardChipSelectPin), logger(logger){}
 
@@ -70,15 +64,6 @@ void SDCardHandler::writeData(string filePath, const char *data){
     file.println(data);
     file.flush();
     file.close();
-}
-
-SDCardHandler::SDCardFileReader SDCardHandler::readFile(string filePath){
-    File file = SD.open(filePath.c_str(), FILE_READ);
-    if (!file) {
-        throw SDCardError();
-    }
-    SDCardFileReader reader = SDCardFileReader(file);
-    return reader;
 }
 
 bool SDCardHandler::deleteAllFilesInDir(String dirPath) {
@@ -160,48 +145,4 @@ vector<string> SDCardHandler::listFilesInDir(string dirName){
 
     dir.close(); // Close the directory
     return fileList;
-}
-
-SDCardHandler::SDCardFileReader::SDCardFileReader(File file){
-    this->file = file;
-}
-
-String SDCardHandler::SDCardFileReader::readNextLine(){
-    if(!file){
-        throw SDCardError();
-    }
-    if(file.available()){
-        String line = file.readStringUntil('\n');
-        return line;
-    }else{
-        throw EndOfFileError();
-    }
-}
-
-void SDCardHandler::SDCardFileReader::close(){
-    file.close();
-}
-
-String SDCardHandler::calculateMD5(String& filePath) {
-    File file = SD.open(filePath, FILE_READ);
-    if (!file) {
-        logger->error(String("Failed to open file for MD5 calculation: ") + filePath);
-        throw SDCardError();
-    }
-
-    MD5Builder md5;
-    md5.begin();
-
-    const size_t bufferSize = 512;
-    uint8_t buffer[bufferSize];
-
-    while (file.available()) {
-        size_t bytesRead = file.read(buffer, bufferSize);
-        md5.add(buffer, bytesRead);
-    }
-
-    md5.calculate();
-    file.close();
-
-    return md5.toString();  // Returns a 32-character hex string
 }
