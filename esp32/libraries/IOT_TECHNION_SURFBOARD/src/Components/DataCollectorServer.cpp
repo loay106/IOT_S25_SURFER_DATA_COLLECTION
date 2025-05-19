@@ -14,7 +14,7 @@ void DataCollectorServer::begin()
     Logger::getInstance()->info("Starting uploader server...");
 
     if (!MDNS.begin(hostname.c_str())) {
-      Logger::getInstance()->error("Error setting up mDNS responder");
+      Logger::getInstance()->error(F("Error setting up mDNS responder"));
       return;
     } else {
       Logger::getInstance()->info("mDNS responder started with hostname: " + hostname + ".local");
@@ -22,7 +22,7 @@ void DataCollectorServer::begin()
       MDNS.addService("_surferdata", "_tcp", 80);
       MDNS.addServiceTxt("_http", "_tcp", "device", hostname);
       MDNS.addServiceTxt("_surferdata", "_tcp", "device", hostname);
-      Logger::getInstance()->debug("mDNS services registered.");
+      Logger::getInstance()->debug(F("mDNS services registered."));
     }
 
     expose_list_samplings_endpoint();
@@ -34,7 +34,7 @@ void DataCollectorServer::begin()
 
     server.begin();
     serverStarted = true;
-    Logger::getInstance()->info("Uploader server started on port 80");
+    Logger::getInstance()->info(F("Uploader server started on port 80"));
 }
 
 bool DataCollectorServer::stopRequestReceived(){
@@ -44,16 +44,16 @@ bool DataCollectorServer::stopRequestReceived(){
 
 void DataCollectorServer::stop(){
     if (!serverStarted) return;
-    Logger::getInstance()->info("Stopping uploader server...");
+    Logger::getInstance()->info(F("Stopping uploader server..."));
     server.end();
     serverStarted = false;
     stopFlag = false;
-    Logger::getInstance()->info("Uploader server stopped.");
+    Logger::getInstance()->info(F("Uploader server stopped."));
 }
 
 void DataCollectorServer::expose_list_samplings_endpoint(){
     server.on("/samplings/list", HTTP_GET, [this](AsyncWebServerRequest *request){
-        Logger::getInstance()->info("Received request to /list");
+        Logger::getInstance()->info(F("Received request to /list"));
         std::vector<std::string> files = sd->listFilesInDir("/samplings");
         String json = "{\"files\":[";
         for (size_t i = 0; i < files.size(); ++i) {
@@ -71,7 +71,7 @@ void DataCollectorServer::expose_download_endpoint(){
         Logger::getInstance()->info("Received request to /download");
   
         if (!request->hasParam("file")) {
-          Logger::getInstance()->debug("Missing 'file' parameter in download request");
+          Logger::getInstance()->debug(F("Missing 'file' parameter in download request"));
           request->send(400, "application/json", "{\"error\":\"Missing 'file' parameter\"}");
           return;
         }
@@ -130,10 +130,10 @@ void DataCollectorServer::expose_download_endpoint(){
 
 void DataCollectorServer::expose_validate_download_endpoint(){
     server.on("/validate", HTTP_GET, [this](AsyncWebServerRequest *request){
-        Logger::getInstance()->info("Received request to /validate");
+        Logger::getInstance()->info(F("Received request to /validate"));
   
         if (!request->hasParam("file") || !request->hasParam("md5")) {
-          Logger::getInstance()->debug("Missing parameters in validate request");
+          Logger::getInstance()->debug(F("Missing parameters in validate request"));
           request->send(400, "application/json", "{\"error\":\"Missing 'file' or 'md5' parameter\"}");
           return;
         }
@@ -154,10 +154,10 @@ void DataCollectorServer::expose_validate_download_endpoint(){
         Logger::getInstance()->debug("Cached MD5: " + actual_md5);
   
         if (actual_md5 == expected_md5) {
-          Logger::getInstance()->debug("MD5 match confirmed.");
+          Logger::getInstance()->debug(F("MD5 match confirmed."));
           request->send(200, "application/json", "{\"status\":\"MD5 match\"}");
         } else {
-          Logger::getInstance()->debug("MD5 mismatch.");
+          Logger::getInstance()->debug(F("MD5 mismatch."));
           request->send(409, "application/json", "{\"error\":\"MD5 mismatch\"}");
         }
       });
@@ -165,14 +165,14 @@ void DataCollectorServer::expose_validate_download_endpoint(){
 
 void DataCollectorServer::expose_remove_all_samplings_endpoint(){
     server.on("/samplings/delete", HTTP_POST, [this](AsyncWebServerRequest *request){
-        Logger::getInstance()->info("Received request to delete all files in /samplings");
+        Logger::getInstance()->info(F("Received request to delete all files in /samplings"));
         bool success = sd->deleteAllFilesInDir("/samplings");
         if (success) {
           md5Cache.clear();
-          Logger::getInstance()->debug("All files deleted successfully.");
+          Logger::getInstance()->debug(F("All files deleted successfully."));
           request->send(200, "application/json", "{\"status\":\"All files deleted\"}");
         } else {
-          Logger::getInstance()->error("Failed to delete all files.");
+          Logger::getInstance()->error(F("Failed to delete all files."));
           request->send(500, "application/json", "{\"error\":\"Failed to delete files\"}");
         }
       });

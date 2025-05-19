@@ -14,7 +14,7 @@ class RTCTimeHandler{
 
         void init(){
             if (!rtc.begin()) {
-                logger->error("Couldn't find RTC device. Check the wiring");
+                logger->error(F("Couldn't find RTC device. Check the wiring"));
                 throw InitError();
             }
         }

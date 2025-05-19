@@ -28,7 +28,7 @@ void ControlUnitSyncManager::connect(){
     if (esp_now_init() == ESP_OK) {
         ControlUnitSyncManager::logger->info(String("ESP Now init success! Connected to channel ") + String(channel));
     }else {
-        ControlUnitSyncManager::logger->error("ESPNow init failed!");
+        ControlUnitSyncManager::logger->error(F("ESPNow init failed!"));
         throw ESPNowSyncError();
     }
 
@@ -51,7 +51,7 @@ void ControlUnitSyncManager::sendCommand(const ControlUnitCommand& command,const
     string message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(samplingUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
-        ControlUnitSyncManager::logger->error("Failed to send command");
+        ControlUnitSyncManager::logger->error(F("Failed to send command"));
         throw ESPNowSyncError();
     }
 }
@@ -63,7 +63,7 @@ void ControlUnitSyncManager::broadcastCommand(const ControlUnitCommand& command,
     string message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(nullptr, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
-        ControlUnitSyncManager::logger->error("Failed to send command");
+        ControlUnitSyncManager::logger->error(F("Failed to send command"));
         throw ESPNowSyncError();
     } 
 }
@@ -79,7 +79,7 @@ void ControlUnitSyncManager::addStatusUpdateMessage(StatusUpdateMessage msg) {
         xSemaphoreGive(queueMutex); // Release the mutex
     } else {
         // Log an error if the mutex could not be acquired (unlikely in normal conditions)
-        ControlUnitSyncManager::logger->error("Deadlock in queue mutex");
+        ControlUnitSyncManager::logger->error(F("Deadlock in queue mutex"));
     }
 }
 
@@ -90,7 +90,7 @@ StatusUpdateMessage ControlUnitSyncManager::popStatusUpdateMessage() {
         statusUpdateQueue.pop();   
         xSemaphoreGive(ControlUnitSyncManager::queueMutex); // Release the mutex
     } else {
-        ControlUnitSyncManager::logger->error("Deadlock in queue mutex");
+        ControlUnitSyncManager::logger->error(F("Deadlock in queue mutex"));
     }
     return msg;
 }
@@ -105,7 +105,7 @@ void ControlUnitSyncManager::processReceivedMessages(const uint8_t *mac_addr, co
         statusMessage.status = status;
         ControlUnitSyncManager::addStatusUpdateMessage(statusMessage);
     }catch(InvalidSyncMessage& err){
-        logger->error("Invalid status update message received!");
+        logger->error(F("Invalid status update message received!"));
         return;
     }
 }

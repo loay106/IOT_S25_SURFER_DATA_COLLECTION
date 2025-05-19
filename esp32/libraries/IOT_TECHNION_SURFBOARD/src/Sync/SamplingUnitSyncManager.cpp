@@ -9,7 +9,7 @@ void SamplingUnitSyncManager::onDataReceivedCallback(const uint8_t *mac_addr, co
         CommandMessage cmd = deserializeCommand(incomingData, len);
         SamplingUnitSyncManager::setNextCommand(cmd);
     }catch(InvalidSyncMessage& err){
-        SamplingUnitSyncManager::logger->error("Invalid command message received!");
+        SamplingUnitSyncManager::logger->error(F("Invalid command message received!"));
         return;
     }
 }
@@ -29,7 +29,7 @@ void SamplingUnitSyncManager::connect(){
         return;
     }
     if (esp_now_init() != ESP_OK) {
-        SamplingUnitSyncManager::logger->info("Error initializing ESP-NOW");
+        SamplingUnitSyncManager::logger->info(F("Error initializing ESP-NOW"));
         throw ESPNowSyncError();
     }else{
         SamplingUnitSyncManager::logger->info("ESP Now Init success! Connected to channel " + String(channel));
@@ -50,7 +50,7 @@ void SamplingUnitSyncManager::reportStatus(SamplingUnitStatusMessage status){
     string message = serializeStatusUpdateMsg(status);
     esp_err_t result = esp_now_send(controlUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
-        SamplingUnitSyncManager::logger->error("Failed to report status!");
+        SamplingUnitSyncManager::logger->error(F("Failed to report status!"));
     }
 }
 

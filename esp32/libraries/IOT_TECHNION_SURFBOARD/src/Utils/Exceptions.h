@@ -14,6 +14,7 @@ class CloudSyncError: public BaseError {};
 class EndOfFileError: public BaseError {};
 class InvalidSyncMessage: public BaseError {};
 class InvalidConfigFile: public BaseError {};
+class InvalidData: public BaseError {};
 
 
 #endif /* UNIT_EXCEPTIONS_H */

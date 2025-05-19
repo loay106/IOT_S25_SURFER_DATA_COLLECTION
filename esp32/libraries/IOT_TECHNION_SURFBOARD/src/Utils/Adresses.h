@@ -7,7 +7,7 @@ using namespace std;
 #include <sstream>
 #include <iomanip>
 #include <vector>
-#include <stdexcept>
+#include "Exceptions.h"
 
 inline String macToString(uint8_t mac[6]) {
     String macStr;
@@ -32,13 +32,13 @@ inline void stringToMac(const std::string &macString, uint8_t mac[6]) {
 
     while (std::getline(macStream, byteStr, '_')) {
         if (i >= 6) {
-            throw std::invalid_argument("Invalid MAC address format: too many bytes");
+            throw InvalidData();
         }
         mac[i++] = static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16));
     }
 
     if (i != 6) {
-        throw std::invalid_argument("Invalid MAC address format: not enough bytes");
+        throw InvalidData();
     }
 }
 

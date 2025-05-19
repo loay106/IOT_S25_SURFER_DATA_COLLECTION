@@ -21,7 +21,7 @@ class Mock_HX711 : public SensorBase {
 
         void disableSensor() override {
             sensor_enabled=false;
-            logger->debug("Mock HX711 sensor disabled");
+            logger->debug(F("Mock HX711 sensor disabled"));
         };
 
         string getSample() override{

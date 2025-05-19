@@ -56,10 +56,10 @@ class WifiHandler {
     }
 
     void disconnect() {
-      logger->info("Disconnecting from WiFi...");
+      logger->info(F("Disconnecting from WiFi..."));
       WiFi.disconnect(true);
       WiFi.mode(WIFI_OFF);
-      logger->info("WiFi disconnected and turned off.");
+      logger->info(F("WiFi disconnected and turned off."));
     }
 
     String getMacAddress(){

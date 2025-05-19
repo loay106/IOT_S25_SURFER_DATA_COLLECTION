@@ -38,6 +38,30 @@ public:
         currentLevel = level;
     }
 
+    void info(const __FlashStringHelper* message) {
+        if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::INFO)) {
+            Serial.print(F("[INFO] "));
+            Serial.println(message);
+            Serial.flush();
+        }  
+    }
+
+    void error(const __FlashStringHelper* message) {
+        if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::ERROR)) {
+            Serial.print(F("[ERROR] "));
+            Serial.println(message);
+            Serial.flush();
+        }  
+    }
+
+    void debug(const __FlashStringHelper* message) {
+        if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::DEBUG)) {
+            Serial.print(F("[ERROR] "));
+            Serial.println(message);
+            Serial.flush();
+        }  
+    }
+
     void info(const String& message) {
         if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::INFO)) {
             Serial.print(F("[INFO] "));

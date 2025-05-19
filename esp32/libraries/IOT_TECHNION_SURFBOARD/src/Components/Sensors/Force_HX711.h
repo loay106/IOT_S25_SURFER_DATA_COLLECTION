@@ -23,7 +23,7 @@ class Force_HX711 : public SensorBase {
         void enableSensor() override {};
 
         void disableSensor() override {
-            logger->info("HX711 sensor disabled");
+            logger->info(F("HX711 sensor disabled"));
         };
 
         string getSample() override{

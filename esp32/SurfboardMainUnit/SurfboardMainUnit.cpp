@@ -85,7 +85,7 @@ void SurfboardMainUnit::startSampling() {
     try {
         syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLING, samplingParams);
     } catch (ESPNowSyncError& error) {
-        logger->error("Failed to send command to sampling units! Try again!");
+        logger->error(F("Failed to send command to sampling units! Try again!"));
         return;
     }
 
@@ -129,7 +129,7 @@ void SurfboardMainUnit::stopSampling() {
 
 void SurfboardMainUnit::startSampleFilesUpload() {
     updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STARTING);
-    logger->info("File upload starting...");
+    logger->info(F("File upload starting..."));
 
     if (wifiHandler->isConnected()) {
         wifiHandler->disconnect();
@@ -148,7 +148,7 @@ void SurfboardMainUnit::startSampleFilesUpload() {
         try {
             syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
         } catch (ESPNowSyncError& error) {
-            logger->error("Failed to send command to sampling units! Try again!");
+            logger->error(F("Failed to send command to sampling units! Try again!"));
         }
     }
 
@@ -168,7 +168,7 @@ void SurfboardMainUnit::startSampleFilesUpload() {
     }
 
     server->begin();
-    logger->info(String("File upload started!"));
+    logger->info(F("File upload started!"));
     updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
 }
 
@@ -198,7 +198,7 @@ bool SurfboardMainUnit::sendStopUploadToSamplingUnitDataServer(String hostname) 
 
 void SurfboardMainUnit::stopSampleFilesUpload() {
     updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING);
-    logger->info(String("Stopping file upload..."));
+    logger->info(F("Stopping file upload..."));
 
     if (syncManager->isESPNowConnected()) {
         syncManager->disconnect();
@@ -234,21 +234,21 @@ void SurfboardMainUnit::handleButtonPress() {
         switch (status) {
             case SystemStatus::SYSTEM_SAMPLING:
             case SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR:
-                logger->debug(String("Soft or long press detected while sampling"));
+                logger->debug(F("Soft or long press detected while sampling"));
                 stopSampling();
                 break;
 
             case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
-                logger->debug(String("Soft or long press detected while file uploading"));
+                logger->debug(F("Soft or long press detected while file uploading"));
                 stopSampleFilesUpload();
                 break;
 
             case SystemStatus::SYSTEM_STAND_BY:
                 if (press == ButtonPressType::SOFT_PRESS) {
-                    logger->debug(String("Soft press detected while on standby"));
+                    logger->debug(F("Soft press detected while on standby"));
                     startSampling();
                 } else {
-                    logger->debug(String("Long press detected while on standby"));
+                    logger->debug(F("Long press detected while on standby"));
                     startSampleFilesUpload();
                 }
                 break;
@@ -428,7 +428,7 @@ void SurfboardMainUnit::loopDiscoverDisconnected() {
     for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
         if ((current - it->second.lastStatusUpdateMillis) >= MAX_STATUS_UPDATE_DELAY &&
             it->second.status != SamplerStatus::UNIT_ERROR) {
-            logger->info(String("Unit ") + String(it->first.c_str()) + String(" is disconnected!"));
+            logger->info(String("Unit ") + it->first + String(" is disconnected!"));
             it->second.status = SamplerStatus::UNIT_ERROR;
         }
     }

@@ -39,7 +39,7 @@ void SensorBase::stopSampling(){
 
 void SensorBase::writeSamples(){
     if(!samplingFileName){
-        logger->error("samplingFileName is empty!");
+        logger->error(F("samplingFileName is empty!"));
         return;
     }
     try{

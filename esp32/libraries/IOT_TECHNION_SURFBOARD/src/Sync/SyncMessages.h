@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <vector>
 #include <sstream>
-#include <stdexcept>
 
 #include "../Utils/Status.h"
 #include "../Utils/Exceptions.h"

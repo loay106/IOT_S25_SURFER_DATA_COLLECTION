@@ -22,12 +22,12 @@ class IMU_BNO080: public SensorBase {
         }
         void disableSensor() override {
             sensor.enableAccelerometer(0);
-            logger->info("BNO080 sensor disabled");
+            logger->info(F("BNO080 sensor disabled"));
         }
         void init() override {
             Wire.begin(21, 22);
             if (sensor.begin() == false){
-                logger->error("BNO080 not detected at default I2C address. Check your jumpers and the hookup guide");
+                logger->error(F("BNO080 not detected at default I2C address. Check your jumpers and the hookup guide"));
                 throw InitError();
             }
             Wire.setClock(400000);

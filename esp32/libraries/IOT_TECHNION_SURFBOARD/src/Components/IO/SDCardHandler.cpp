@@ -12,10 +12,10 @@ void SDCardHandler::init(){
     // using default sd card pins
     SPI.begin(18,19,23,SDCardChipSelectPin);
     if (!SD.begin(SDCardChipSelectPin)) {
-        logger->error("Failed to init SD card!");
+        logger->error(F("Failed to init SD card!"));
         throw InitError();
     }
-    logger->info("SD card initialized successfully.");
+    logger->info(F("SD card initialized successfully."));
 }
 
 bool SDCardHandler::deleteFile(String filePath){
@@ -25,7 +25,7 @@ bool SDCardHandler::deleteFile(String filePath){
 void SDCardHandler::getFolder(String folderPath , File* root){
     *root = SD.open(folderPath);
     if (!(*root) || !(*root) .isDirectory()) {
-        logger->error("Failed to open directory");
+        logger->error(F("Failed to open directory"));
         throw SDCardError();
     }
 }
@@ -55,7 +55,7 @@ void SDCardHandler::createFolder(string folderName){
 void SDCardHandler::createFile(string filePath){
     File file = SD.open(filePath.c_str(), FILE_WRITE);
     if (!file) {
-        logger->error("Failed to create file!");
+        logger->error(F("Failed to create file!"));
         throw SDCardError();
     }
     file.close();
@@ -115,7 +115,7 @@ std::map<string, string> SDCardHandler::readConfigFile(string filePath) {
     std::map<std::string, std::string> configMap;
     File configFile = SD.open(filePath.c_str(), FILE_READ);
     if (!configFile) {
-        logger->error("Config file not found!!");
+        logger->error(F("Config file not found!!"));
         throw SDCardError();
     }
     int lineNum = 1;

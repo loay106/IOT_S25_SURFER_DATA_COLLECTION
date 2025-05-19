@@ -22,7 +22,7 @@ void Sampler::init(){
 
 void Sampler::startSampling(unsigned long timestamp){
     string curretTimestamp = to_string(timestamp);
-    logger->info("Sampling started!");
+    logger->info(F("Sampling started!"));
     for(int i=0;i<sensors.size(); i++){
         string filePath = "/samplings/" + curretTimestamp + "_" + to_string(i) + "_" + sensors[i]->getModel().c_str();
         sensors[i]->startSampling(filePath);
@@ -32,7 +32,7 @@ void Sampler::startSampling(unsigned long timestamp){
 
 
 void Sampler::stopSampling(){
-    logger->info("Sampling stopped!");
+    logger->info(F("Sampling stopped!"));
     for(int i=0; i<sensors.size(); i++){
         String message = String("Sensor id=") + String(i) + ", model=" + sensors[i]->getModel() + " stopped!";
         logger->info(message);
