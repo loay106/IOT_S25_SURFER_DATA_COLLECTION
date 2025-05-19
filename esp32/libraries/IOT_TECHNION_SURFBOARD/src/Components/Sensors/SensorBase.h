@@ -26,7 +26,7 @@ class SensorBase{
     protected:
         Logger* logger;
         String model;
-        String* samplingFileName;
+        String samplingFileName;
         unsigned long samplesCount;
         unsigned long samplingStartMillis;
         void flushSamplesBuffer(bool isLastLine);

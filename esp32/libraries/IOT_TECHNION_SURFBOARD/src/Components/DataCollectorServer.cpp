@@ -113,7 +113,7 @@ void DataCollectorServer::expose_download_endpoint(){
               file.close();
               md5.calculate();
               String finalMd5 = md5.toString();
-              md5Cache[std::string(filepath.c_str())] = finalMd5;
+              md5Cache[filepath] = finalMd5;
               Logger::getInstance()->debug("MD5 calculated and cached: " + finalMd5);
               md5Started = false;
               totalRead = 0;
@@ -140,17 +140,16 @@ void DataCollectorServer::expose_validate_download_endpoint(){
   
         String filename = request->getParam("file")->value();
         String expected_md5 = request->getParam("md5")->value();
-        std::string filename_key = std::string(filename.c_str());
   
-        Logger::getInstance()->debug(String("Validating file: ") + filename_key.c_str() + " against MD5: " + expected_md5);
+        Logger::getInstance()->debug(String("Validating file: ") + filename + " against MD5: " + expected_md5);
   
-        if (md5Cache.find(filename_key) == md5Cache.end()) {
-          Logger::getInstance()->debug(String("MD5 not found in cache for file: ") + filename_key.c_str());
+        if (md5Cache.find(filename) == md5Cache.end()) {
+          Logger::getInstance()->debug(String("MD5 not found in cache for file: ") + filename);
           request->send(404, "application/json", "{\"error\":\"MD5 not cached\"}");
           return;
         }
   
-        String actual_md5 = md5Cache[filename_key];
+        String actual_md5 = md5Cache[filename];
         Logger::getInstance()->debug("Cached MD5: " + actual_md5);
   
         if (actual_md5 == expected_md5) {

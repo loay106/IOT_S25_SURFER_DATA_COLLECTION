@@ -4,7 +4,7 @@ SensorBase::SensorBase(Logger *logger, SDCardHandler *sdcardHandler, String mode
     this->logger = logger;
     this->sdcardHandler = sdcardHandler;
     this->model = model;
-    samplingFileName = nullptr;
+    samplingFileName = "";
     sampleBuffer = "";
     samplesCount=0;
     samplingStartMillis=0;
@@ -15,7 +15,7 @@ String SensorBase::getModel(){
 }
 
 void SensorBase::startSampling(const String& outputFilePath){
-    samplingFileName = new String(outputFilePath);
+    samplingFileName = String(outputFilePath);
     sampleBuffer = "";
     samplesCount=0;
     samplingStartMillis=millis();
@@ -24,8 +24,7 @@ void SensorBase::startSampling(const String& outputFilePath){
 
 void SensorBase::stopSampling(){
     flushSamplesBuffer(true);
-    delete samplingFileName;
-    samplingFileName = nullptr;
+    samplingFileName = "";
     unsigned long timeElapsed = (millis() - samplingStartMillis)/1000;
     int rate = samplesCount/timeElapsed;
     String message = String("Wrote ") + String(samplesCount) + " samples in " + String(timeElapsed) + " seconds. Sensor's rate: " + String(rate) + " Hz";
@@ -35,7 +34,7 @@ void SensorBase::stopSampling(){
 }
 
 void SensorBase::writeSamples(){
-    if(!samplingFileName){
+    if(samplingFileName == ""){
         logger->error(F("samplingFileName is empty!"));
         return;
     }
@@ -57,6 +56,6 @@ void SensorBase::flushSamplesBuffer(bool isLastLine){
     if (isLastLine && sampleBuffer.endsWith("|")) {
         sampleBuffer.remove(sampleBuffer.length() - 1);
     }
-    sdcardHandler->writeData(*samplingFileName, sampleBuffer.c_str());
+    sdcardHandler->writeData(samplingFileName, sampleBuffer.c_str());
     sampleBuffer = "";
 }

@@ -21,7 +21,7 @@ class DataCollectorServer {
     unsigned long lastRetryTime = 0;
     const unsigned long retryInterval = 5000;
     String hostname;
-    std::map<std::string, String> md5Cache;
+    std::map<String, String> md5Cache;
     static bool stopFlag;
 
     void expose_list_samplings_endpoint();
