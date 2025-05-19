@@ -2,8 +2,6 @@
 #define SENSOR_BASE_H
 
 #include <Arduino.h>
-#include <sstream>
-
 #include "../IO/SDCardHandler.h"
 #include "../IO/Logger.h"
 #include "../../Utils/Exceptions.h"

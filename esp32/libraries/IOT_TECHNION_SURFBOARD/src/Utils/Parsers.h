@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <vector>
 #include "Exceptions.h"
-#include <iostream>
 
 inline std::vector<String> parseSensorParams(const String& input) {
     if (input.length() < 2 || input.charAt(0) != '[' || input.charAt(input.length() - 1) != ']') {

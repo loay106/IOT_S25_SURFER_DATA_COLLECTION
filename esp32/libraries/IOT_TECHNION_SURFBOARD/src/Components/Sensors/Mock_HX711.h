@@ -24,18 +24,17 @@ class Mock_HX711 : public SensorBase {
             logger->debug(F("Mock HX711 sensor disabled"));
         };
 
-        String getSample() override{
+        String getSample() override {
             unsigned long current = millis();
-            if(sensor_enabled && (current - lastRetrieved) >= delayBetweenSamples){
-                ostringstream oss;
-                oss.precision(2);
-                oss << std::fixed << random(0,1000) * 9.81;
+            if (sensor_enabled && (current - lastRetrieved) >= delayBetweenSamples) {
+                float force = random(0, 1000) * 9.81;
                 lastRetrieved = current;
-                return oss.str().c_str();
-            }else{
+                return String(force, 2);  // 2 decimal places
+            } else {
                 throw NotReadyError();
             }
         }
+
 
         void init() override{}
 };

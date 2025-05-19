@@ -34,18 +34,19 @@ class IMU_BNO080: public SensorBase {
         }
 
         String getSample() override {
-            if(sensor.dataAvailable()) {
+            if (sensor.dataAvailable()) {
                 float accX = sensor.getAccelX();
                 float accY = sensor.getAccelY();
                 float accZ = sensor.getAccelZ();
-                ostringstream oss;
-                oss.precision(2);
-                oss << std::fixed << accX << " " << accY << " " << accZ;
-                return oss.str().c_str();
+
+                // Format each float with 2 decimal places
+                String result = String(accX, 2) + " " + String(accY, 2) + " " + String(accZ, 2);
+                return result;
             } else {
                 throw NotReadyError();
             }
         }
+
 };
 
 #endif // IMU_BNO080_H
