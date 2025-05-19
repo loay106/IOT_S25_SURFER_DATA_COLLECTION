@@ -1,7 +1,7 @@
 #include "SurfboardMainUnit.h"
 #include <HTTPClient.h>
 
-SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler, WifiHandler* wifiHandler, string _wifi_ssid, string _wifi_password, DataCollectorServer* server) {
+SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler, WifiHandler* wifiHandler, String _wifi_ssid, String _wifi_password, DataCollectorServer* server) {
   this->logger = logger;
   this->syncManager = syncManager;
   this->timeHandler = timeHandler;
@@ -80,8 +80,8 @@ void SurfboardMainUnit::startSampling() {
   }
 
   currentSamplingSession = timeHandler->getCurrentTimestamp();
-  std::map<string, string> samplingParams;
-  samplingParams["TIMESTAMP"] = to_string(currentSamplingSession);
+  std::map<String, String> samplingParams;
+  samplingParams["TIMESTAMP"] = String(currentSamplingSession);
   try {
     syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLING, samplingParams);
   } catch (ESPNowSyncError& error) {
@@ -110,7 +110,7 @@ void SurfboardMainUnit::stopSampling() {
     delay(300);
   }
   try {
-    std::map<string, string> params;
+    std::map<String, String> params;
     syncManager->broadcastCommand(ControlUnitCommand::STOP_SAMPLING, params);
   } catch (ESPNowSyncError& error) {
     return;
@@ -140,7 +140,7 @@ void SurfboardMainUnit::startSampleFilesUpload() {
     delay(300);
   }
 
-  std::map<string, string> params;
+  std::map<String, String> params;
   params["WIFI_SSID"] = WIFI_SSID;
   params["WIFI_PASSWORD"] = WIFI_PASSWORD;
 
@@ -311,12 +311,12 @@ void SurfboardMainUnit::sendCommand(SamplingUnitRep& unit, ControlUnitCommand co
   }
 
   try {
-    std::map<string, string> commandParams;
+    std::map<String, String> commandParams;
     String macStr = macToString(unit.mac);
 
     switch (command) {
       case ControlUnitCommand::START_SAMPLING:
-        commandParams["TIMESTAMP"] = to_string(currentSamplingSession);
+        commandParams["TIMESTAMP"] = String(currentSamplingSession);
         logger->debug(String("Sending START_SAMPLING command to unit ") + macStr);
         syncManager->sendCommand(ControlUnitCommand::START_SAMPLING, commandParams, unit.mac);
         break;

@@ -1,40 +1,37 @@
 #ifndef PARSERS_H 
 #define PARSERS_H
 
-#include <string>
+#include <Arduino.h>
 #include <vector>
 #include "Exceptions.h"
 #include <iostream>
 
-inline std::vector<std::string> parseSensorParams(const std::string& input) {
-    // Ensure the input starts with '[' and ends with ']'
-    if (input.empty() || input.front() != '[' || input.back() != ']') {
+inline std::vector<String> parseSensorParams(const String& input) {
+    if (input.length() < 2 || input.charAt(0) != '[' || input.charAt(input.length() - 1) != ']') {
         throw InvalidData();
     }
 
-    // Extract the content inside the brackets
-    std::string content = input.substr(1, input.size() - 2);
+    String content = input.substring(1, input.length() - 1);
+    std::vector<String> result;
+    String currentParam;
 
-    std::vector<std::string> result;
-    std::string currentParam;
-
-    for (char c : content) {
+    for (int i = 0; i < content.length(); i++) {
+        char c = content.charAt(i);
         if (c == ',') {
-            // Push the current parameter to the vector
             result.push_back(currentParam);
-            currentParam.clear();
+            currentParam = "";
         } else {
             currentParam += c;
         }
     }
 
-    // Push the last parameter if there is any
-    if (!currentParam.empty()) {
+    if (currentParam.length() > 0) {
         result.push_back(currentParam);
     }
 
     return result;
 }
+
 
 
 #endif /* PARSERS_H */

@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <map>
-#include <string>
 using namespace std;
 
 #include <Arduino.h>
@@ -35,8 +34,8 @@ class SurfboardMainUnit {
         unsigned long currentSamplingSession;
         SystemStatus status;
         WifiHandler* wifiHandler;
-        string WIFI_SSID;
-        string WIFI_PASSWORD;
+        String WIFI_SSID;
+        String WIFI_PASSWORD;
         DataCollectorServer* server;
 
         void updateStatus(SystemStatus newStatus);
@@ -53,7 +52,7 @@ class SurfboardMainUnit {
         bool pingSamplingUnitDataServer(String hostname);
         
     public:
-        SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WifiHandler* wifiHandler, string _wifi_ssid, string _wifi_password, DataCollectorServer* server);
+        SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WifiHandler* wifiHandler, String _wifi_ssid, String _wifi_password, DataCollectorServer* server);
         void init(uint8_t samplingUnitsAdresses[][6], int samplingUnitsNum);
         void addSensor(SensorBase* sensor);
 

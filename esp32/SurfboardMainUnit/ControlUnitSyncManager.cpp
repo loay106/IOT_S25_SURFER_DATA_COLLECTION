@@ -47,8 +47,8 @@ void ControlUnitSyncManager::disconnect(){
     isConnected=false;
 }
 
-void ControlUnitSyncManager::sendCommand(const ControlUnitCommand& command,const std::map<string,string>& params, uint8_t samplingUnitMac[6]){
-    string message = serializeCommand(command, params);
+void ControlUnitSyncManager::sendCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]){
+    String message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(samplingUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
         ControlUnitSyncManager::logger->error(F("Failed to send command"));
@@ -56,11 +56,11 @@ void ControlUnitSyncManager::sendCommand(const ControlUnitCommand& command,const
     }
 }
 
-void ControlUnitSyncManager::broadcastCommand(const ControlUnitCommand& command,const std::map<string,string>& params){
+void ControlUnitSyncManager::broadcastCommand(const ControlUnitCommand& command,const std::map<String,String>& params){
     if(ControlUnitSyncManager::peers.size() == 0){
         return;
     }
-    string message = serializeCommand(command, params);
+    String message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(nullptr, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
         ControlUnitSyncManager::logger->error(F("Failed to send command"));

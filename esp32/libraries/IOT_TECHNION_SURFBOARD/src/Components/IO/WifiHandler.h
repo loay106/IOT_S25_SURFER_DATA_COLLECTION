@@ -10,14 +10,13 @@ class WifiHandler {
     unsigned long lastAttemptTime = 0;
     const unsigned long retryInterval = 5000; // retry every 5 seconds
     bool isConnecting = false;
-    String ssid, password;
+    String ssid;
+    String password;
     Logger* logger;
 
   public:
-    WifiHandler(Logger* logger, const char* _ssid, const char* _password) {
+    WifiHandler(Logger* logger, const String& _ssid,const String& _password): ssid(_ssid), password(_password){
       this->logger = logger;
-      ssid = _ssid;
-      password = _password;
     }
 
     void connect() {

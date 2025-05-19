@@ -3,7 +3,6 @@
 
 using namespace std;
 #include <cstdint>
-#include <string>
 #include <queue>
 #include <vector>
 
@@ -43,8 +42,8 @@ class ControlUnitSyncManager{
         }
         void connect();
         void disconnect();
-        void sendCommand(const ControlUnitCommand& command,const std::map<string,string>& params, uint8_t samplingUnitMac[6]);
-        void broadcastCommand(const ControlUnitCommand& command,const std::map<string,string>& params); 
+        void sendCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]);
+        void broadcastCommand(const ControlUnitCommand& command,const std::map<String,String>& params); 
         bool hasStatusUpdateMessages();
         static void addStatusUpdateMessage(StatusUpdateMessage msg); 
         static StatusUpdateMessage popStatusUpdateMessage(); 
