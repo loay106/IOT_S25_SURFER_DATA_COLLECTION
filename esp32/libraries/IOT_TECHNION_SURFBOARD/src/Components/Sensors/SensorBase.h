@@ -2,7 +2,6 @@
 #define SENSOR_BASE_H
 
 #include <Arduino.h>
-#include <string>
 #include <sstream>
 
 #include "../IO/SDCardHandler.h"
@@ -22,12 +21,12 @@ const int MAX_SAMPLES_BUFFER_LENGTH = 4096;
 class SensorBase{
     private:
         SDCardHandler* sdcardHandler;
-        string* sampleBuffer;
+        String sampleBuffer;
 
     protected:
         Logger* logger;
         String model;
-        string* samplingFileName;
+        String* samplingFileName;
         unsigned long samplesCount;
         unsigned long samplingStartMillis;
         void flushSamplesBuffer(bool isLastLine);
@@ -37,13 +36,13 @@ class SensorBase{
         SensorBase(Logger* logger, SDCardHandler* sdcardHandler, String model);
 
         String getModel();
-        void startSampling(string outputFilePath);
+        void startSampling(const String& outputFilePath);
         void stopSampling();
         void writeSamples();
 
         virtual void enableSensor() = 0;
         virtual void disableSensor() = 0;
-        virtual string getSample() = 0;
+        virtual String getSample() = 0;
         virtual void init() = 0;
 };
 

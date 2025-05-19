@@ -33,7 +33,7 @@ class IMU_BNO080: public SensorBase {
             Wire.setClock(400000);
         }
 
-        string getSample() override {
+        String getSample() override {
             if(sensor.dataAvailable()) {
                 float accX = sensor.getAccelX();
                 float accY = sensor.getAccelY();
@@ -41,7 +41,7 @@ class IMU_BNO080: public SensorBase {
                 ostringstream oss;
                 oss.precision(2);
                 oss << std::fixed << accX << " " << accY << " " << accZ;
-                return oss.str();
+                return oss.str().c_str();
             } else {
                 throw NotReadyError();
             }

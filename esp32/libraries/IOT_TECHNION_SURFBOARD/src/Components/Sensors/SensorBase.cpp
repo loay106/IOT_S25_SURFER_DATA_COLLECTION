@@ -5,7 +5,7 @@ SensorBase::SensorBase(Logger *logger, SDCardHandler *sdcardHandler, String mode
     this->sdcardHandler = sdcardHandler;
     this->model = model;
     samplingFileName = nullptr;
-    sampleBuffer = new string("");
+    sampleBuffer = "";
     samplesCount=0;
     samplingStartMillis=0;
 }
@@ -14,12 +14,9 @@ String SensorBase::getModel(){
     return model;
 }
 
-void SensorBase::startSampling(string outputFilePath){
-    samplingFileName = new string(outputFilePath);
-    string* temp = sampleBuffer;
-    temp = nullptr;
-    sampleBuffer = new string("");
-    delete temp;
+void SensorBase::startSampling(const String& outputFilePath){
+    samplingFileName = new String(outputFilePath);
+    sampleBuffer = "";
     samplesCount=0;
     samplingStartMillis=millis();
     enableSensor();
@@ -43,13 +40,13 @@ void SensorBase::writeSamples(){
         return;
     }
     try{
-        string sample = getSample();
-        sampleBuffer->append(sample);
+        String sample = getSample();
+        sampleBuffer += sample;
         samplesCount++;
-        if(sampleBuffer->length() >= MAX_SAMPLES_BUFFER_LENGTH){
+        if(sampleBuffer.length() >= MAX_SAMPLES_BUFFER_LENGTH){
             flushSamplesBuffer(false);
         }else{
-            sampleBuffer->append("|");
+            sampleBuffer += "|";
         }
     }catch(NotReadyError& err){
         return;
@@ -57,13 +54,9 @@ void SensorBase::writeSamples(){
 }
 
 void SensorBase::flushSamplesBuffer(bool isLastLine){
-    string* temp = sampleBuffer;
-    if(isLastLine){
-        if (!temp->empty()) {
-            temp->pop_back();
-        }
+    if (isLastLine && sampleBuffer.endsWith("|")) {
+        sampleBuffer.remove(sampleBuffer.length() - 1);
     }
-    sampleBuffer = new string();
-    sdcardHandler->writeData((*samplingFileName).c_str(), temp->c_str());
-    delete temp;
+    sdcardHandler->writeData(*samplingFileName, sampleBuffer.c_str());
+    sampleBuffer = "";
 }

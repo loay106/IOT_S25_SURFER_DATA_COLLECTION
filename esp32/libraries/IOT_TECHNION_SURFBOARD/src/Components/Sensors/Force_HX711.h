@@ -26,14 +26,14 @@ class Force_HX711 : public SensorBase {
             logger->info(F("HX711 sensor disabled"));
         };
 
-        string getSample() override{
+        String getSample() override{
             if (sensor.is_ready()){
                 float mass_kg = sensor.get_units() / 1000;
                 float force_N = mass_kg * GRAVITY;
                 ostringstream oss;
                 oss.precision(2);
                 oss << std::fixed << force_N;
-                return oss.str();
+                return oss.str().c_str();
             }else {
                 throw NotReadyError();
             }

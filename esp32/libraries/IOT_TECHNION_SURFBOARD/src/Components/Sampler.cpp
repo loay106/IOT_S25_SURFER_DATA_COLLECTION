@@ -21,10 +21,9 @@ void Sampler::init(){
 }
 
 void Sampler::startSampling(unsigned long timestamp){
-    string curretTimestamp = to_string(timestamp);
     logger->info(F("Sampling started!"));
     for(int i=0;i<sensors.size(); i++){
-        string filePath = "/samplings/" + curretTimestamp + "_" + to_string(i) + "_" + sensors[i]->getModel().c_str();
+        String filePath = String("/samplings/") + String(timestamp) + "_" + String(i) + "_" + sensors[i]->getModel();
         sensors[i]->startSampling(filePath);
     }    
     _isSampling=true;

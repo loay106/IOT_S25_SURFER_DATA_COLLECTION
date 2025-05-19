@@ -2,7 +2,6 @@
 #define SAMPLER_H
 
 #include <vector>
-#include <string>
 #include <Arduino.h>
 
 #include "Sensors/SensorBase.h"
