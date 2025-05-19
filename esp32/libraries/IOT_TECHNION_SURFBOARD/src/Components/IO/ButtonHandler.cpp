@@ -30,7 +30,7 @@ void IRAM_ATTR ButtonHandler::ButtonISR(void* arg) {
 void ButtonHandler::init() {
     pinMode(buttonPin, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(buttonPin), ButtonISR, this, CHANGE);
-    logger->info("ButtonHandler initialized for pin " + std::to_string(buttonPin));
+    logger->info(String("ButtonHandler initialized for pin ") + String(buttonPin));
 }
 
 ButtonPressType ButtonHandler::getLastPressType() {

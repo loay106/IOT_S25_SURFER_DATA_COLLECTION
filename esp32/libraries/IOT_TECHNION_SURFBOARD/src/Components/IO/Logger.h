@@ -2,59 +2,65 @@
 #define LOGGER_H
 
 #include <Arduino.h>
-#include <string>
 
-using namespace std;
-
-// Constants for logging levels
+// Logging levels
 enum class LogLevel {
-    NONE,    // No logging
-    ERROR,   // Log only errors
-    INFO,    // Log errors and info
-    DEBUG    // Log errors, info, and debug messages
+    NONE,
+    ERROR,
+    INFO,
+    DEBUG
 };
 
-const int SERIAL_BAUD_RATE = 57600;
-
 class Logger {
-    // singleton class
-    private:
-        LogLevel currentLevel; // Current logging level
-        static Logger* instance;
+private:
+    LogLevel currentLevel;
+    static Logger* instance;
 
-        Logger(){
-            currentLevel = LogLevel::INFO;
-        }
-        void logMessage(LogLevel level, string prefix, string message);
-    public:
-        Logger(const Logger& obj) = delete;
+    Logger() {
+        currentLevel = LogLevel::INFO;
+    }
 
-        static Logger* getInstance() {
-            if (Logger::instance == nullptr) {
-                Logger::instance = new Logger();
-            }
-            return Logger::instance;
-        }
+public:
+    Logger(const Logger&) = delete;
 
-        void init(int serialBaudRate) {
-            Serial.begin(serialBaudRate);
+    static Logger* getInstance() {
+        if (instance == nullptr) {
+            instance = new Logger();
         }
+        return instance;
+    }
 
-        void setLogLevel(LogLevel level) {
-            currentLevel = level;
-        }
+    void init(int serialBaudRate) {
+        Serial.begin(serialBaudRate);
+    }
 
-        void info(string message) {
-            logMessage(LogLevel::INFO, "INFO", message);
-        }
+    void setLogLevel(LogLevel level) {
+        currentLevel = level;
+    }
 
-        void error(string message) {
-            logMessage(LogLevel::ERROR, "ERROR", message);
+    void info(const String& message) {
+        if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::INFO)) {
+            Serial.print(F("[INFO] "));
+            Serial.println(message);
+            Serial.flush();
         }
+    }
 
-        void debug(string message) {
-            logMessage(LogLevel::DEBUG, "DEBUG", message);
+    void error(const String& message) {
+        if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::ERROR)) {
+            Serial.print(F("[ERROR] "));
+            Serial.println(message);
+            Serial.flush();
         }
+    }
+
+    void debug(const String& message) {
+        if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::DEBUG)) {
+            Serial.print(F("[DEBUG] "));
+            Serial.println(message);
+            Serial.flush();
+        }
+    }
 };
 
 #endif /* LOGGER_H */

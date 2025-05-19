@@ -9,16 +9,21 @@ using namespace std;
 #include <vector>
 #include <stdexcept>
 
-inline string macToString(uint8_t mac[6]) {
-    std::ostringstream macStream;
+inline String macToString(uint8_t mac[6]) {
+    String macStr;
     for (int i = 0; i < 6; i++) {
         if (i > 0) {
-            macStream << "_";
+            macStr += "_";
         }
-        macStream << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(mac[i]);
+        if (mac[i] < 0x10) {
+            macStr += "0"; // pad with leading zero
+        }
+        macStr += String(mac[i], HEX);
     }
-    return macStream.str();
+    macStr.toUpperCase();
+    return macStr;
 }
+
 
 inline void stringToMac(const std::string &macString, uint8_t mac[6]) {
     std::istringstream macStream(macString);

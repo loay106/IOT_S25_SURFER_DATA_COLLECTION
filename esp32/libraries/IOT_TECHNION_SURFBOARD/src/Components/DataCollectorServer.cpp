@@ -17,7 +17,7 @@ void DataCollectorServer::begin()
       Logger::getInstance()->error("Error setting up mDNS responder");
       return;
     } else {
-      Logger::getInstance()->info("mDNS responder started with hostname: " + std::string((hostname + ".local").c_str()));
+      Logger::getInstance()->info("mDNS responder started with hostname: " + hostname + ".local");
       MDNS.addService("_http", "_tcp", 80);
       MDNS.addService("_surferdata", "_tcp", 80);
       MDNS.addServiceTxt("_http", "_tcp", "device", hostname);
@@ -62,7 +62,7 @@ void DataCollectorServer::expose_list_samplings_endpoint(){
         }
         json += "]}";
         request->send(200, "application/json", json);
-        Logger::getInstance()->debug("Responded with file list JSON: " + std::string(json.c_str()));
+        Logger::getInstance()->debug("Responded with file list JSON: " + json);
       });
 }
 
@@ -77,10 +77,10 @@ void DataCollectorServer::expose_download_endpoint(){
         }
   
         String filepath = request->getParam("file")->value();
-        Logger::getInstance()->debug("Requested file path: " + std::string(filepath.c_str()));
+        Logger::getInstance()->debug("Requested file path: " + filepath);
   
         if (!sd->exists(filepath)) {
-          Logger::getInstance()->debug("File not found: " + std::string(filepath.c_str()));
+          Logger::getInstance()->debug("File not found: " + filepath);
           request->send(404, "application/json", "{\"error\":\"File not found\"}");
           return;
         }
@@ -114,7 +114,7 @@ void DataCollectorServer::expose_download_endpoint(){
               md5.calculate();
               String finalMd5 = md5.toString();
               md5Cache[std::string(filepath.c_str())] = finalMd5;
-              Logger::getInstance()->debug("MD5 calculated and cached: " + std::string(finalMd5.c_str()));
+              Logger::getInstance()->debug("MD5 calculated and cached: " + finalMd5);
               md5Started = false;
               totalRead = 0;
             }
@@ -124,7 +124,7 @@ void DataCollectorServer::expose_download_endpoint(){
   
         response->addHeader("Connection", "close");
         request->send(response);
-        Logger::getInstance()->info("Streaming file: " + std::string(filepath.c_str()));
+        Logger::getInstance()->info("Streaming file: " + filepath);
       });
 }
 
@@ -142,16 +142,16 @@ void DataCollectorServer::expose_validate_download_endpoint(){
         String expected_md5 = request->getParam("md5")->value();
         std::string filename_key = std::string(filename.c_str());
   
-        Logger::getInstance()->debug("Validating file: " + filename_key + " against MD5: " + std::string(expected_md5.c_str()));
+        Logger::getInstance()->debug(String("Validating file: ") + filename_key.c_str() + " against MD5: " + expected_md5);
   
         if (md5Cache.find(filename_key) == md5Cache.end()) {
-          Logger::getInstance()->debug("MD5 not found in cache for file: " + filename_key);
+          Logger::getInstance()->debug(String("MD5 not found in cache for file: ") + filename_key.c_str());
           request->send(404, "application/json", "{\"error\":\"MD5 not cached\"}");
           return;
         }
   
         String actual_md5 = md5Cache[filename_key];
-        Logger::getInstance()->debug("Cached MD5: " + std::string(actual_md5.c_str()));
+        Logger::getInstance()->debug("Cached MD5: " + actual_md5);
   
         if (actual_md5 == expected_md5) {
           Logger::getInstance()->debug("MD5 match confirmed.");

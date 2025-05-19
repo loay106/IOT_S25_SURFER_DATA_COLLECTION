@@ -32,7 +32,7 @@ void SamplingUnitSyncManager::connect(){
         SamplingUnitSyncManager::logger->info("Error initializing ESP-NOW");
         throw ESPNowSyncError();
     }else{
-        SamplingUnitSyncManager::logger->info("ESP Now Init success! Connected to channel " + to_string(channel));
+        SamplingUnitSyncManager::logger->info("ESP Now Init success! Connected to channel " + String(channel));
     }
     if (esp_now_add_peer(controlUnitPeer) != ESP_OK) {
         throw ESPNowSyncError();

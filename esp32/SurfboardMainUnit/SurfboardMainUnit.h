@@ -24,7 +24,7 @@ typedef struct SamplingUnitRep{
 
 class SurfboardMainUnit {
     private:
-        std::map<string, SamplingUnitRep> samplingUnits; // mac string to instance mapping
+        std::map<String, SamplingUnitRep> samplingUnits; // mac string to instance mapping
         ControlUnitSyncManager* syncManager;
         RTCTimeHandler* timeHandler;
         RGBStatusHandler* statusLighthandler;

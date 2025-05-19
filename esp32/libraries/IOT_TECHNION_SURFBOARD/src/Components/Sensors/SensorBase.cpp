@@ -1,6 +1,6 @@
 #include "SensorBase.h"
 
-SensorBase::SensorBase(Logger *logger, SDCardHandler *sdcardHandler, string model){
+SensorBase::SensorBase(Logger *logger, SDCardHandler *sdcardHandler, String model){
     this->logger = logger;
     this->sdcardHandler = sdcardHandler;
     this->model = model;
@@ -10,7 +10,7 @@ SensorBase::SensorBase(Logger *logger, SDCardHandler *sdcardHandler, string mode
     samplingStartMillis=0;
 }
 
-string SensorBase::getModel(){
+String SensorBase::getModel(){
     return model;
 }
 
@@ -31,7 +31,7 @@ void SensorBase::stopSampling(){
     samplingFileName = nullptr;
     unsigned long timeElapsed = (millis() - samplingStartMillis)/1000;
     int rate = samplesCount/timeElapsed;
-    string message = "Wrote " + to_string(samplesCount) + " samples in " + to_string(timeElapsed) + " seconds. Sensor's rate: " + to_string(rate) + " Hz";
+    String message = String("Wrote ") + String(samplesCount) + " samples in " + String(timeElapsed) + " seconds. Sensor's rate: " + String(rate) + " Hz";
     logger->info(message);
     samplesCount=0;
     disableSensor();

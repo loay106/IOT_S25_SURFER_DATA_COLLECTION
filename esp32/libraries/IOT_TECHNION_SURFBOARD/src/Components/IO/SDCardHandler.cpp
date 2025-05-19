@@ -64,7 +64,7 @@ void SDCardHandler::createFile(string filePath){
 void SDCardHandler::writeData(string filePath, const char *data){
     File file = SD.open(filePath.c_str(), FILE_APPEND);
     if (!file) {
-        logger->error("Failed to open file: " + filePath);
+        logger->error(String("Failed to open file: ") + filePath.c_str());
         throw SDCardError();
     }
     file.println(data);
@@ -84,7 +84,7 @@ SDCardHandler::SDCardFileReader SDCardHandler::readFile(string filePath){
 bool SDCardHandler::deleteAllFilesInDir(String dirPath) {
     File dir = SD.open(dirPath);
     if (!dir || !dir.isDirectory()) {
-        logger->error("Directory not found: " + std::string(dirPath.c_str()));
+        logger->error(String("Directory not found: ") + dirPath);
         return false;
     }
 
@@ -95,9 +95,9 @@ bool SDCardHandler::deleteAllFilesInDir(String dirPath) {
         String fileName = entry.name();
         if (!entry.isDirectory()) {
             String fullPath = dirPath + "/" + fileName;
-            logger->debug("Deleting file: " + std::string(fullPath.c_str()));
+            logger->debug(String("Deleting file: ") + fullPath);
             if (!SD.remove(fullPath)) {
-                logger->error("Failed to delete: " + std::string(fullPath.c_str()));
+                logger->error(String("Failed to delete: ") + fullPath);
                 success = false;
             }
         }
@@ -123,8 +123,7 @@ std::map<string, string> SDCardHandler::readConfigFile(string filePath) {
         String line = configFile.readStringUntil('\n');
         int delimiterPos = line.indexOf('=');
         if(delimiterPos <= 0){
-            string message = "Invalid line " + to_string(lineNum) + " in config file!";
-            logger->error(message);
+            logger->error(String("Invalid line ") + String(lineNum) + String(" in config file!"));
             throw InvalidConfigFile(); 
         }
         String key = line.substring(0, delimiterPos);
@@ -186,7 +185,7 @@ void SDCardHandler::SDCardFileReader::close(){
 String SDCardHandler::calculateMD5(String& filePath) {
     File file = SD.open(filePath, FILE_READ);
     if (!file) {
-        logger->error("Failed to open file for MD5 calculation: " + string(filePath.c_str()));
+        logger->error(String("Failed to open file for MD5 calculation: ") + filePath);
         throw SDCardError();
     }
 

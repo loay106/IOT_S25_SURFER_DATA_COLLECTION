@@ -26,7 +26,7 @@ class SensorBase{
 
     protected:
         Logger* logger;
-        string model;
+        String model;
         string* samplingFileName;
         unsigned long samplesCount;
         unsigned long samplingStartMillis;
@@ -34,9 +34,9 @@ class SensorBase{
 
     public:
         SensorBase(){};
-        SensorBase(Logger* logger, SDCardHandler* sdcardHandler, string model);
+        SensorBase(Logger* logger, SDCardHandler* sdcardHandler, String model);
 
-        string getModel();
+        String getModel();
         void startSampling(string outputFilePath);
         void stopSampling();
         void writeSamples();

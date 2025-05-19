@@ -62,7 +62,7 @@ class WifiHandler {
       logger->info("WiFi disconnected and turned off.");
     }
 
-    string getMacAddress(){
+    String getMacAddress(){
         uint8_t mac[6];
         esp_read_mac(mac, ESP_MAC_WIFI_STA);
         return macToString(mac);
