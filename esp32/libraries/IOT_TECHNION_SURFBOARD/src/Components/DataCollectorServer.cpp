@@ -54,10 +54,10 @@ void DataCollectorServer::stop(){
 void DataCollectorServer::expose_list_samplings_endpoint(){
     server.on("/samplings/list", HTTP_GET, [this](AsyncWebServerRequest *request){
         Logger::getInstance()->info(F("Received request to /list"));
-        std::vector<std::string> files = sd->listFilesInDir("/samplings");
+        std::vector<String> files = sd->listFilesInDir("/samplings");
         String json = "{\"files\":[";
         for (size_t i = 0; i < files.size(); ++i) {
-          json += "\"" + String(files[i].c_str()) + "\"";
+          json += "\"" + String(files[i]) + "\"";
           if (i < files.size() - 1) json += ",";
         }
         json += "]}";

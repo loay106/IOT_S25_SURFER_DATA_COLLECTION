@@ -64,6 +64,6 @@ void SensorBase::flushSamplesBuffer(bool isLastLine){
         }
     }
     sampleBuffer = new string();
-    sdcardHandler->writeData(*samplingFileName, temp->c_str());
+    sdcardHandler->writeData((*samplingFileName).c_str(), temp->c_str());
     delete temp;
 }

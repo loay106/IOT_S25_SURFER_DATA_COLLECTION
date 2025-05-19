@@ -12,19 +12,15 @@ void SDCardHandler::init(){
     logger->info(F("SD card initialized successfully."));
 }
 
-bool SDCardHandler::deleteFile(String filePath){
+File SDCardHandler::open(const String &path){
+    return SD.open(path);
+}
+
+bool SDCardHandler::deleteFile(const String& filePath){
     return SD.remove(filePath);
 }
 
-void SDCardHandler::getFolder(String folderPath , File* root){
-    *root = SD.open(folderPath);
-    if (!(*root) || !(*root) .isDirectory()) {
-        logger->error(F("Failed to open directory"));
-        throw SDCardError();
-    }
-}
-
-bool SDCardHandler::exists(String& path) {
+bool SDCardHandler::exists(const String& path) {
     return SD.exists(path);
 }
 
@@ -32,12 +28,11 @@ fs::FS* SDCardHandler::getFS() {
     return &SD;
 }
 
-void SDCardHandler::createFolder(string folderName){
-    const char *folderNameCStr = folderName.c_str();
+void SDCardHandler::createFolder(const String& folderName){
     // Check if the folder already exists
-    if (!SD.exists(folderNameCStr)) {
+    if (!SD.exists(folderName)) {
         // Attempt to create the folder
-        if (SD.mkdir(folderNameCStr)) {
+        if (SD.mkdir(folderName)) {
             logger->info("Folder created successfully.");
         } else {
             logger->error("Failed to create folder.");
@@ -46,8 +41,8 @@ void SDCardHandler::createFolder(string folderName){
     }
 }
 
-void SDCardHandler::createFile(string filePath){
-    File file = SD.open(filePath.c_str(), FILE_WRITE);
+void SDCardHandler::createFile(const String& filePath){
+    File file = SD.open(filePath, FILE_WRITE);
     if (!file) {
         logger->error(F("Failed to create file!"));
         throw SDCardError();
@@ -55,10 +50,10 @@ void SDCardHandler::createFile(string filePath){
     file.close();
 }
 
-void SDCardHandler::writeData(string filePath, const char *data){
-    File file = SD.open(filePath.c_str(), FILE_APPEND);
+void SDCardHandler::writeData(const String& filePath, const char *data){
+    File file = SD.open(filePath, FILE_APPEND);
     if (!file) {
-        logger->error(String("Failed to open file: ") + filePath.c_str());
+        logger->error(String("Failed to open file: ") + filePath);
         throw SDCardError();
     }
     file.println(data);
@@ -66,7 +61,7 @@ void SDCardHandler::writeData(string filePath, const char *data){
     file.close();
 }
 
-bool SDCardHandler::deleteAllFilesInDir(String dirPath) {
+bool SDCardHandler::deleteAllFilesInDir(const String& dirPath) {
     File dir = SD.open(dirPath);
     if (!dir || !dir.isDirectory()) {
         logger->error(String("Directory not found: ") + dirPath);
@@ -96,9 +91,9 @@ bool SDCardHandler::deleteAllFilesInDir(String dirPath) {
 
 
 
-std::map<string, string> SDCardHandler::readConfigFile(string filePath) {
-    std::map<std::string, std::string> configMap;
-    File configFile = SD.open(filePath.c_str(), FILE_READ);
+std::map<String, String> SDCardHandler::readConfigFile(const String& filePath) {
+    std::map<String, String> configMap;
+    File configFile = SD.open(filePath, FILE_READ);
     if (!configFile) {
         logger->error(F("Config file not found!!"));
         throw SDCardError();
@@ -115,7 +110,7 @@ std::map<string, string> SDCardHandler::readConfigFile(string filePath) {
         key.trim();
         String value = line.substring(delimiterPos + 1);
         value.trim();
-        configMap[string(key.c_str())] = string(value.c_str());
+        configMap[key] = value;
         lineNum++;
     }
     configFile.close();
@@ -123,10 +118,10 @@ std::map<string, string> SDCardHandler::readConfigFile(string filePath) {
 }
 
 
-vector<string> SDCardHandler::listFilesInDir(string dirName){
-    vector<string> fileList;
+vector<String> SDCardHandler::listFilesInDir(const String& dirName){
+    vector<String> fileList;
     // Open the directory
-    File dir = SD.open(dirName.c_str());
+    File dir = SD.open(dirName);
     if (!dir || !dir.isDirectory()) {
         Serial.println("Error: Directory does not exist or could not be opened.");
         throw SDCardError();
@@ -137,7 +132,7 @@ vector<string> SDCardHandler::listFilesInDir(string dirName){
     while ((entry = dir.openNextFile())) {
         if (!entry.isDirectory()) {
             // If it's a file, add the full path to the vector
-            string filePath = dirName + "/" + string(entry.name());
+            String filePath = dirName + "/" + entry.name();
             fileList.push_back(filePath);
         }
         entry.close(); // Close the current file to avoid resource leaks

@@ -45,15 +45,15 @@ void setup() {
         while(true){delay(500);};
     }
 
-    string WIFI_SSID = "";
-    string WIFI_PASSWORD = "";
+    String WIFI_SSID = "";
+    String WIFI_PASSWORD = "";
     vector<string> sensorsParams;
 
     try{
-        std::map<string, string> configMap = sdCardHandler->readConfigFile("//unit.config");
+        std::map<String, String> configMap = sdCardHandler->readConfigFile("//unit.config");
         WIFI_SSID = configMap["WIFI_SSID"];
         WIFI_PASSWORD = configMap["WIFI_PASSWORD"];
-        sensorsParams = parseSensorParams(configMap["SENSORS_PARAMS"]);
+        sensorsParams = parseSensorParams(configMap["SENSORS_PARAMS"].c_str());
     }catch(exception& e){
         logger->error("Error reading config file!");
         while(true){delay(500);};
@@ -68,7 +68,7 @@ void setup() {
     Sampler* sampler = new Sampler(logger, sdCardHandler);
     String ownMacAddress = wifiHandler->getMacAddress().c_str();
     DataCollectorServer* server = new DataCollectorServer(sdCardHandler, ownMacAddress, true);
-    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wifiHandler, WIFI_SSID, WIFI_PASSWORD, server);
+    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wifiHandler, WIFI_SSID.c_str(), WIFI_PASSWORD.c_str(), server);
 
     // declare sensors here....
     Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);

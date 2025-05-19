@@ -3,13 +3,13 @@
 
 #include <string>
 #include <vector>
-#include <stdexcept>
+#include "Exceptions.h"
 #include <iostream>
 
 inline std::vector<std::string> parseSensorParams(const std::string& input) {
     // Ensure the input starts with '[' and ends with ']'
     if (input.empty() || input.front() != '[' || input.back() != ']') {
-        throw std::invalid_argument("Invalid format: Input must start with '[' and end with ']'.");
+        throw InvalidData();
     }
 
     // Extract the content inside the brackets

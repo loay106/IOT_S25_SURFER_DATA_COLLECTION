@@ -3,7 +3,6 @@
 
 using namespace std;
 #include <cstdint>
-#include <string>
 #include <vector>
 #include <map>
 #include <SD.h>
@@ -22,21 +21,18 @@ class SDCardHandler{
         SDCardHandler(const uint8_t SDCardChipSelectPin, Logger* logger);
 
         void init();
-        void getFolder(String folderPath , File* root);
-        File open(const String& path) {
-            return SD.open(path);
-        }
-        void createFolder(string folderName);
-        void createFile(string filePath);
-        bool deleteFile(String filePath);
-        bool deleteAllFilesInDir(String dirPath);
-        void writeData(string filePath,const char* data);
-        bool exists(String& path);
+        File open(const String& path);
+        void createFolder(const String& folderName);
+        void createFile(const String& filePath);
+        bool deleteFile(const String& filePath);
+        bool deleteAllFilesInDir(const String& dirPath);
+        void writeData(const String& filePath,const char* data);
+        bool exists(const String& path);
         fs::FS* getFS();
 
-        std::map<string, string> readConfigFile(string filePath);
+        std::map<String, String> readConfigFile(const String& filePath);
 
-        vector<string> listFilesInDir(string dirName);
+        vector<String> listFilesInDir(const String& dirName);
 };
 
 
