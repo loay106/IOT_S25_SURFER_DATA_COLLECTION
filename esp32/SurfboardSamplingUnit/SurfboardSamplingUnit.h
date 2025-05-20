@@ -2,8 +2,6 @@
 #define SURFBOARD_SAMPLING_UNIT_H
 
 #include <vector>
-#include <string>
-using namespace std;
 
 #include <IOT_TECHNION_SURFBOARD.h>
 #include "SamplingUnitSyncManager.h"

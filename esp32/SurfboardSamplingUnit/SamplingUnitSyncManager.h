@@ -3,7 +3,6 @@
 
 #include <WiFi.h>
 #include <esp_now.h>
-#include <string>
 #include <Arduino.h>
 
 #include <IOT_TECHNION_SURFBOARD.h>

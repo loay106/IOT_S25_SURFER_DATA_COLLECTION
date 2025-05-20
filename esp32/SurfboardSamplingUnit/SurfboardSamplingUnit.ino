@@ -23,13 +23,13 @@ void setup() {
         while(true){delay(500);};
     }
 
-    string WIFI_SSID = "";
-    string WIFI_PASSWORD = "";
-    vector<string> sensorsParams;
+    String WIFI_SSID = "";
+    String WIFI_PASSWORD = "";
+    vector<String> sensorsParams;
     int WIFI_ESP_NOW_CHANNEL = 0;
 
     try{
-        std::map<string, string> configMap = sdCardHandler->readConfigFile("/unit.config");
+        std::map<String, String> configMap = sdCardHandler->readConfigFile("/unit.config");
         WIFI_SSID = configMap["WIFI_SSID"];
         WIFI_PASSWORD = configMap["WIFI_PASSWORD"];
         sensorsParams = parseSensorParams(configMap["SENSORS_PARAMS"]);
@@ -47,7 +47,7 @@ void setup() {
             wifiHandler->connect();
             logger->info("Wifi connection established!");
             WIFI_ESP_NOW_CHANNEL = wifiHandler->getChannel();
-            logger->info("Setting ESP now channel to " + to_string(WIFI_ESP_NOW_CHANNEL));
+            logger->info("Setting ESP now channel to " + String(WIFI_ESP_NOW_CHANNEL));
             wifiHandler->disconnect();
             logger->info("Wifi disconnected!");
             break;

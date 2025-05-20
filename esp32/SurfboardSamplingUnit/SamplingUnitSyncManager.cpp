@@ -47,7 +47,7 @@ void SamplingUnitSyncManager::disconnect(){
 }
 
 void SamplingUnitSyncManager::reportStatus(SamplingUnitStatusMessage status){
-    string message = serializeStatusUpdateMsg(status);
+    String message = serializeStatusUpdateMsg(status);
     esp_err_t result = esp_now_send(controlUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
         SamplingUnitSyncManager::logger->error(F("Failed to report status!"));

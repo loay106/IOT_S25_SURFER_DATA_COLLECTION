@@ -1,6 +1,8 @@
 #include <IOT_TECHNION_SURFBOARD.h>
 
-uint8_t controlUnitMacAddress[6]={0x10, 0x06, 0x1C, 0x86, 0x00, 0x18};//MOUSA ESP32 MAC
+uint8_t controlUnitMacAddress[6]={
+        0x10, 0x06, 0x1C, 0x86, 0x00, 0x18
+  };//MOUSA ESP32 MAC
 const int serialBaudRate = 115200;
 Logger* logger;
 SamplingUnitSyncManager* samplingSyncManager;

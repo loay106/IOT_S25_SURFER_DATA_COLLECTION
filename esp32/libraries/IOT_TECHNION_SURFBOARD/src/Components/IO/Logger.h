@@ -56,7 +56,7 @@ public:
 
     void debug(const __FlashStringHelper* message) {
         if (static_cast<int>(currentLevel) >= static_cast<int>(LogLevel::DEBUG)) {
-            Serial.print(F("[ERROR] "));
+            Serial.print(F("[DEBUG] "));
             Serial.println(message);
             Serial.flush();
         }  

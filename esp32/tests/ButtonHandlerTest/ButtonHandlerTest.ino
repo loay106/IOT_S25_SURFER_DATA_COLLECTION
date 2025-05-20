@@ -8,7 +8,7 @@ int buttonPin = 4;
 
 void setup() {
     logger = Logger::getInstance();
-    logger->init(57600);
+    logger->init(115200);
     logger->setLogLevel(LogLevel::DEBUG);
     buttonHandler = new ButtonHandler(logger, buttonPin);
     buttonHandler->init();
