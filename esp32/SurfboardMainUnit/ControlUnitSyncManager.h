@@ -18,16 +18,8 @@ class ControlUnitSyncManager{
         static Logger* logger;
         static queue<StatusUpdateMessage> statusUpdateQueue;
         static SemaphoreHandle_t queueMutex;
-        static vector<esp_now_peer_info_t*> peers;
         static ControlUnitSyncManager* instance;
-        bool isConnected;
-        int channel;
-
-        static void processReceivedMessages(const uint8_t *mac_addr, const uint8_t *incomingData, int len);  
-        ControlUnitSyncManager(){
-            isConnected=false;
-            channel=0; // default
-        }; 
+        ControlUnitSyncManager(){}; 
     public:
         ControlUnitSyncManager(const ControlUnitSyncManager& obj) = delete;
         static ControlUnitSyncManager* getInstance() {
@@ -36,17 +28,15 @@ class ControlUnitSyncManager{
             }
             return instance;
         }
-        void init(uint8_t samplingUnits[][6], int samplingUnitsNum, int channel);
-        bool isESPNowConnected(){
-            return isConnected;
-        }
-        void connect();
-        void disconnect();
-        void sendCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]);
-        void broadcastCommand(const ControlUnitCommand& command,const std::map<String,String>& params); 
+        void sendESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]);
+        void broadcastESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params); 
         bool hasStatusUpdateMessages();
+        void sendWifiStopFileUploadCommand(const String& unitMac);
+        void pingServerWifi(const String& unitMac);
         static void addStatusUpdateMessage(StatusUpdateMessage msg); 
         static StatusUpdateMessage popStatusUpdateMessage(); 
+        static void processReceivedESPNowMessages(const uint8_t *mac_addr, const uint8_t *incomingData, int len);
+
 };
 
 

@@ -1,31 +1,49 @@
 #include "SurfboardMainUnit.h"
 
-// constants
+// ******************************* UNIT CONFIG - EDIT HERE ******************************
+void addSamplingUnits(vector<uint8_t*> samplingUnitsMacAddresses){
+    // define and add your sampling units here...
+    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0});
+    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68});
+    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64});
+}
+
+void addSensors(vector<String> sensorsParams){
+    /*  add sensors here...
+        you can pass params from the config file in the sd card
+        sensor[i] should have the param in sensorsParams[i]
+    */
+    Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);
+    Mock_HX711* mock_force_1 = new Mock_HX711(logger,sdCardHandler, 1000);
+
+    mock_force_0->init();
+    mock_force_1->init();
+    mainUnit->addSensor(mock_force_0);
+    mainUnit->addSensor(mock_force_1);
+}
+
+// ******************************* END OF UNIT CONFIG ***********************************
+
+// parameters
 uint8_t SDCardChipSelectPin = 5;
-
 int serialBaudRate = 115200;
-
 int RGBRedPin = 25;
 int RGBGreenPin = 26;
 int RGBBluePin = 27;
-
 int buttonPin = 4;
+int ESP_NOW_CHANNEL = 0;
 
 // globals
 SurfboardMainUnit* mainUnit;
 Logger* logger;
 RGBStatusHandler* statusLighthandler;
-
-uint8_t samplingUnitsMacAddresses[1][6] =  {
-    {0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0}, // Loay's esp testing board
-   // {0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68}, // Mousa's esp board
-   // {0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64} // Shada's esp board
-};
+vector<uint8_t*> samplingUnitsMacAddresses;
 
 void setup() {
     logger = Logger::getInstance();
     logger->init(serialBaudRate);
     logger->setLogLevel(LogLevel::DEBUG);
+    delay(200);
 
     logger->info("System init starting...");
 
@@ -59,57 +77,43 @@ void setup() {
         while(true){delay(500);};
     }
 
-    WifiHandler* wifiHandler = new WifiHandler(logger, WIFI_SSID, WIFI_PASSWORD);
-
+    addSamplingUnits();
+    
     ControlUnitSyncManager* syncManager = ControlUnitSyncManager::getInstance();
+    WirelessHandler* wirelessHandler = new WirelessHandler(logger, WIFI_SSID, WIFI_PASSWORD, ESP_NOW_CHANNEL, samplingUnitsMacAddresses, ControlUnitSyncManager::processReceivedESPNowMessages);
     RTCTimeHandler* timeHandler = new RTCTimeHandler(logger);
     ButtonHandler* buttonHandler = new ButtonHandler(logger, buttonPin);
 
     Sampler* sampler = new Sampler(logger, sdCardHandler);
-    String ownMacAddress = wifiHandler->getMacAddress().c_str();
+    String ownMacAddress = wirelessHandler->getMacAddress();
     DataCollectorServer* server = new DataCollectorServer(sdCardHandler, ownMacAddress, true);
-    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wifiHandler, WIFI_SSID, WIFI_PASSWORD, server);
-
-    // declare sensors here....
-    Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);
-    Mock_HX711* mock_force_1 = new Mock_HX711(logger,sdCardHandler, 1000);
+    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wirelessHandler, server);
 
     try{
         // don't change the order of the init
-        syncManager->init(samplingUnitsMacAddresses, 0, 0);
         timeHandler->init();
         buttonHandler->init();
         sampler->init();
-        mainUnit->init(samplingUnitsMacAddresses, 0);
-
-        // init sensors here..
-        // you can pass params from the config file
-        // sensor[i] should have the param in sensorsParams[i]
-        mock_force_0->init();
-        mock_force_1->init();
+        mainUnit->init(samplingUnitsMacAddresses, 1);
+        addSensors();
     }catch(InitError& err){
         logger->error("Init error! Check your wiring!");
+        statusLighthandler->updateColors(RGBColors::RED, RGBColors::RED);
         while(true){delay(500);};
     }
-
-    // add sensors here....
-    mainUnit->addSensor(mock_force_0);
-    mainUnit->addSensor(mock_force_1);
-
-    while(true){
-      try{
-          syncManager->connect();
-      }catch(ESPNowSyncError& err){
-          logger->info("Failed to connect to esp-now!");
-          while(true){delay(500);};
-      }
+    try{
+        wirelessHandler->switchToESPNow();
+        break;
+    }catch(ESPNowSyncError& err){
+        logger->info("Failed to connect to esp-now! Retrying...");
+        delay(500);
     }
-
     logger->info("System init complete!");
 }
 
 void loop() {
     try{  
+        mainUnit->loopComponents();
         mainUnit->handleButtonPress();
         mainUnit->readStatusUpdateMessages();
         mainUnit->loopDiscoverDisconnected();

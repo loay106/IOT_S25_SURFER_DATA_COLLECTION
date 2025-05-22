@@ -1,7 +1,6 @@
 #ifndef DATA_COLLECTOR_SERVER_H 
 #define DATA_COLLECTOR_SERVER_H
 
-#include "../Components/IO/WifiHandler.h"
 #include "../Components/IO/SDCardHandler.h"
 #include "../Components/IO/Logger.h"
 
@@ -35,7 +34,7 @@ class DataCollectorServer {
     DataCollectorServer(SDCardHandler* sdHandler, const String& macAddress, bool isMain);
 
     void begin();
-    bool stopRequestReceived();
+    bool isStopRequestReceived();
     void stop();
 };
 

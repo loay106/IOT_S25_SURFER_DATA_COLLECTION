@@ -4,50 +4,8 @@ ControlUnitSyncManager* ControlUnitSyncManager::instance = nullptr;
 Logger* ControlUnitSyncManager::logger = Logger::getInstance();
 queue<StatusUpdateMessage> ControlUnitSyncManager::statusUpdateQueue;
 SemaphoreHandle_t ControlUnitSyncManager::queueMutex  = xSemaphoreCreateMutex();
-vector<esp_now_peer_info_t*> ControlUnitSyncManager::peers;
 
-void ControlUnitSyncManager::init(uint8_t samplingUnits[][6], int samplingUnitsNum, int channel){
-    WiFi.mode(WIFI_STA);
-
-    this->channel = channel;
-
-    for (int i = 0; i < samplingUnitsNum; i++) {
-        esp_now_peer_info_t* peerInfo = new esp_now_peer_info_t();
-        memcpy(peerInfo->peer_addr, samplingUnits[i], 6);
-        peerInfo->channel = channel;
-        peerInfo->encrypt = false;
-        ControlUnitSyncManager::peers.push_back(peerInfo);
-    }
-}
-
-void ControlUnitSyncManager::connect(){
-    if(isConnected){
-        return;
-    }
-    WiFi.mode(WIFI_STA);
-    if (esp_now_init() == ESP_OK) {
-        ControlUnitSyncManager::logger->info(String("ESP Now init success! Connected to channel ") + String(channel));
-    }else {
-        ControlUnitSyncManager::logger->error(F("ESPNow init failed!"));
-        throw ESPNowSyncError();
-    }
-
-    for(esp_now_peer_info_t* peerInfo: peers){
-        if (esp_now_add_peer(peerInfo) != ESP_OK) {
-            throw ESPNowSyncError();
-        }
-    }
-
-    esp_now_register_recv_cb(ControlUnitSyncManager::processReceivedMessages);
-    isConnected=true;
-}
-
-void ControlUnitSyncManager::disconnect(){
-    esp_now_deinit();
-    isConnected=false;
-}
-
-void ControlUnitSyncManager::sendCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]){
+void ControlUnitSyncManager::sendESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]){
     String message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(samplingUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
@@ -56,7 +14,7 @@ void ControlUnitSyncManager::sendCommand(const ControlUnitCommand& command,const
     }
 }
 
-void ControlUnitSyncManager::broadcastCommand(const ControlUnitCommand& command,const std::map<String,String>& params){
+void ControlUnitSyncManager::broadcastESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params){
     if(ControlUnitSyncManager::peers.size() == 0){
         return;
     }
@@ -66,6 +24,38 @@ void ControlUnitSyncManager::broadcastCommand(const ControlUnitCommand& command,
         ControlUnitSyncManager::logger->error(F("Failed to send command"));
         throw ESPNowSyncError();
     } 
+}
+
+void ControlUnitSyncManager::sendWifiStopFileUploadCommand(const String& unitMac){
+  String hostname = getHostname(unitMac, false);
+  String url = "http://" + hostname + ".local/stop";
+  HTTPClient http;
+  http.begin(url);
+  http.setTimeout(10);
+  logger->info("Sending stop upload to host " + hostname);
+  int httpCode = http.POST("");
+  http.end();
+  if (httpCode == 204) {
+    logger->info(hostname + " received command correctly!");
+  }else{
+    throw WifiError();
+  }
+}
+
+void ControlUnitSyncManager::pingServerWifi(const String& unitMac){
+  String hostname = getHostname(unitMac, false);
+  String url = "http://" + hostname + ".local/ping";
+  HTTPClient http;
+  http.begin(url);
+  http.setTimeout(10);
+  logger->info("Sending stop upload to host " + hostname);
+  int httpCode = http.GET("");
+  http.end();
+  if (httpCode == 204) {
+    logger->info(hostname + " received command correctly!");
+  }else{
+    throw WifiError();
+  }
 }
 
 bool ControlUnitSyncManager::hasStatusUpdateMessages(){

@@ -33,7 +33,7 @@ class SurfboardMainUnit {
         SDCardHandler* sdCardHandler;
         unsigned long currentSamplingSession;
         SystemStatus status;
-        WifiHandler* wifiHandler;
+        WirelessHandler* wirelessHandler;
         String WIFI_SSID;
         String WIFI_PASSWORD;
         DataCollectorServer* server;
@@ -46,14 +46,10 @@ class SurfboardMainUnit {
         void startSampleFilesUpload();
         void stopSampleFilesUpload();
 
-        void sendCommand(SamplingUnitRep& unit, ControlUnitCommand command);
-
-        bool sendStopUploadToSamplingUnitDataServer(String hostname);
-        bool pingSamplingUnitDataServer(String hostname);
-        
+        void sendCommand(SamplingUnitRep& unit, ControlUnitCommand command, std::map<String, String> commandParams);        
     public:
-        SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WifiHandler* wifiHandler, String _wifi_ssid, String _wifi_password, DataCollectorServer* server);
-        void init(uint8_t samplingUnitsAdresses[][6], int samplingUnitsNum);
+        SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WirelessHandler* wirelessHandler, DataCollectorServer* server);
+        void init(vector<uint8_t*> samplingUnitsMacAddresses);
         void addSensor(SensorBase* sensor);
 
         SystemStatus getStatus();
@@ -66,6 +62,7 @@ class SurfboardMainUnit {
         void loopStandby();
         void loopDiscoverDisconnected();
 
+        void loopComponents();
 
 };
 

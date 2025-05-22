@@ -37,7 +37,7 @@ void DataCollectorServer::begin()
     Logger::getInstance()->info(F("Uploader server started on port 80"));
 }
 
-bool DataCollectorServer::stopRequestReceived(){
+bool DataCollectorServer::isStopRequestReceived(){
     bool flag = stopFlag;
     return flag;
 }

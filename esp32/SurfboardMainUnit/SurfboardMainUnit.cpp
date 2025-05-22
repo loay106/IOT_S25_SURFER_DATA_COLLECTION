@@ -1,7 +1,7 @@
 #include "SurfboardMainUnit.h"
 #include <HTTPClient.h>
 
-SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler, WifiHandler* wifiHandler, String _wifi_ssid, String _wifi_password, DataCollectorServer* server) {
+SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler, WirelessHandler* wirelessHandler, DataCollectorServer* server) {
   this->logger = logger;
   this->syncManager = syncManager;
   this->timeHandler = timeHandler;
@@ -10,16 +10,14 @@ SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTim
   this->logger = logger;
   this->sampler = sampler;
   this->sdCardHandler = sdCardHandler;
-  this->WIFI_SSID = _wifi_ssid;
-  this->WIFI_PASSWORD = _wifi_password;
-  this->wifiHandler = wifiHandler;
+  this->wirelessHandler = wirelessHandler;
   this->server = server;
   status = SystemStatus::SYSTEM_STARTING;
   currentSamplingSession = 0;
 }
 
-void SurfboardMainUnit::init(uint8_t samplingUnitsAdresses[][6], int samplingUnitsNum) {
-  for (int i = 0; i < samplingUnitsNum; i++) {
+void SurfboardMainUnit::init(vector<uint8_t*> samplingUnitsMacAddresses) {
+  for (int i = 0; i < samplingUnitsMacAddresses.size(); i++) {
     SamplingUnitRep samplingUnit;
     memcpy(samplingUnit.mac, samplingUnitsAdresses[i], 6);
     samplingUnit.status = SamplerStatus::UNIT_STAND_BY;
@@ -29,7 +27,6 @@ void SurfboardMainUnit::init(uint8_t samplingUnitsAdresses[][6], int samplingUni
     samplingUnit.mDNSHostname = getHostname(macString, false) + ".local";
     samplingUnits[macString] = samplingUnit;
   }
-  syncManager->connect();
   updateStatus(SystemStatus::SYSTEM_STAND_BY);
 }
 
@@ -44,6 +41,9 @@ void SurfboardMainUnit::updateStatus(SystemStatus newStatus) {
     case SystemStatus::SYSTEM_STAND_BY:
       statusLighthandler->updateColors(RGBColors::BLUE, RGBColors::BLUE);
       break;
+    case SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR:
+      statusLighthandler->updateColors(RGBColors::RED, RGBColors::BLUE);
+      break;
     case SystemStatus::SYSTEM_SAMPLING:
       statusLighthandler->updateColors(RGBColors::GREEN, RGBColors::NO_COLOR);
       break;
@@ -52,6 +52,9 @@ void SurfboardMainUnit::updateStatus(SystemStatus newStatus) {
       break;
     case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
       statusLighthandler->updateColors(RGBColors::CYAN, RGBColors::NO_COLOR);
+      break;
+    case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
+      statusLighthandler->updateColors(RGBColors::CYAN, RGBColors::BLUE);
       break;
     case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_PARTIAL_ERROR:
       statusLighthandler->updateColors(RGBColors::CYAN, RGBColors::RED);
@@ -70,22 +73,19 @@ void SurfboardMainUnit::addSensor(SensorBase* sensor) {
 }
 
 void SurfboardMainUnit::startSampling() {
-  if (wifiHandler->isConnected()) {
-    wifiHandler->disconnect();
-    delay(500);
-  }
-  if (!syncManager->isESPNowConnected()) {
-    syncManager->connect();
-    delay(300);
+  if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
+    wirelessHandler->switchToESPNow();
+    updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
   }
 
   currentSamplingSession = timeHandler->getCurrentTimestamp();
   std::map<String, String> samplingParams;
   samplingParams["TIMESTAMP"] = String(currentSamplingSession);
   try {
-    syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLING, samplingParams);
+    syncManager->broadcastESPNowCommand(ControlUnitCommand::START_SAMPLING, samplingParams);
   } catch (ESPNowSyncError& error) {
     logger->error(F("Failed to send command to sampling units! Try again!"));
+    updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
     return;
   }
 
@@ -101,18 +101,18 @@ void SurfboardMainUnit::startSampling() {
 }
 
 void SurfboardMainUnit::stopSampling() {
-  if (wifiHandler->isConnected()) {
-    wifiHandler->disconnect();
-    delay(500);
+  if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
+      wirelessHandler->switchToESPNow();
+      delay(300);
   }
-  if (!syncManager->isESPNowConnected()) {
-    syncManager->connect();
-    delay(300);
-  }
+
   try {
     std::map<String, String> params;
-    syncManager->broadcastCommand(ControlUnitCommand::STOP_SAMPLING, params);
+    syncManager->broadcastESPNowCommand(ControlUnitCommand::STOP_SAMPLING, params);
   } catch (ESPNowSyncError& error) {
+    logger->error(F("Failed to send command STOP_SAMPLING to sampling units!"));
+    sampler->stopSampling();
+    updateStatus(SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR);
     return;
   }
 
@@ -131,13 +131,9 @@ void SurfboardMainUnit::startSampleFilesUpload() {
   updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STARTING);
   logger->info(F("File upload starting..."));
 
-  if (wifiHandler->isConnected()) {
-    wifiHandler->disconnect();
-    delay(500);
-  }
-  if (!syncManager->isESPNowConnected()) {
-    syncManager->connect();
-    delay(300);
+  if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
+      wirelessHandler->switchToESPNow();
+      delay(300);
   }
 
   std::map<String, String> params;
@@ -146,9 +142,11 @@ void SurfboardMainUnit::startSampleFilesUpload() {
 
   for (int i = 0; i < 3; i++) {
     try {
-      syncManager->broadcastCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
+      syncManager->broadcastESPNowCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
     } catch (ESPNowSyncError& error) {
       logger->error(F("Failed to send command to sampling units! Try again!"));
+      updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
+      return;
     }
   }
 
@@ -160,66 +158,18 @@ void SurfboardMainUnit::startSampleFilesUpload() {
 
   delay(200);  // give some time for units to respond
 
-  if (syncManager->isESPNowConnected()) {
-    syncManager->disconnect();
-  }
-  if (!wifiHandler->isConnected()) {
-    wifiHandler->connect();
-  }
-
   server->begin();
-  logger->info(F("File upload started!"));
+  logger->info(F("File upload starting..."));
   updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
-}
 
-bool SurfboardMainUnit::sendStopUploadToSamplingUnitDataServer(String hostname) {
-  if (!wifiHandler->isConnected()) {
-    return false;
-  }
-
-  String url = "http://" + hostname + "/stop";
-  HTTPClient http;
-  http.begin(url);
-  http.setTimeout(5);
-
-  logger->info("Sending stop upload to host " + hostname);
-
-  int httpCode = http.POST("");
-  http.end();
-
-  if (httpCode == 204) {
-    logger->info(hostname + " received command correctly!");
-    return true;
-  } else {
-    logger->error("Failed to send command stop uploading to unit " + hostname);
-    return false;
+  if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::WIFI){
+      wirelessHandler->switchToWifi();
   }
 }
 
 void SurfboardMainUnit::stopSampleFilesUpload() {
   updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING);
   logger->info(F("Stopping file upload..."));
-
-  if (syncManager->isESPNowConnected()) {
-    syncManager->disconnect();
-    delay(300);
-  }
-  if (!wifiHandler->isConnected()) {
-    wifiHandler->connect();
-    delay(500);
-  }
-
-  unsigned long current = millis();
-  std::map<String, SamplingUnitRep>::iterator it;
-  for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
-    bool result = sendStopUploadToSamplingUnitDataServer(it->second.mDNSHostname);
-    if (result) {
-      it->second.lastCommandSentMillis = current;
-      it->second.status = SamplerStatus::UNIT_STAND_BY;
-    }
-  }
-
-  updateStatus(SystemStatus::SYSTEM_STAND_BY);
 }
 
 
@@ -244,6 +194,7 @@ void SurfboardMainUnit::handleButtonPress() {
         break;
 
       case SystemStatus::SYSTEM_STAND_BY:
+      case SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR:
         if (press == ButtonPressType::SOFT_PRESS) {
           logger->debug(F("Soft press detected while on standby"));
           startSampling();
@@ -252,6 +203,9 @@ void SurfboardMainUnit::handleButtonPress() {
           startSampleFilesUpload();
         }
         break;
+      case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
+      case SystemStatus::SYSTEM_ERROR:
+          logger->debug("Press was ignored while on file upload stopping or general error");
     }
     delay(100);  // give some time for status messages
   }
@@ -294,87 +248,61 @@ void SurfboardMainUnit::readStatusUpdateMessages() {
 }
 
 
-void SurfboardMainUnit::sendCommand(SamplingUnitRep& unit, ControlUnitCommand command) {
-  if (wifiHandler->isConnected()) {
-    wifiHandler->disconnect();
-    delay(500);
-  }
-
-  if (!syncManager->isESPNowConnected()) {
-    syncManager->connect();
-    delay(300);
-  }
-
+void SurfboardMainUnit::sendCommand(SamplingUnitRep& unit, ControlUnitCommand command, std::map<String, String> commandParams) {
   unsigned long current = millis();
   if ((current - unit.lastCommandSentMillis) < COMMAND_SEND_MIN_INTERVAL_MILLIS) {
     return;
   }
 
-  try {
-    std::map<String, String> commandParams;
-    String macStr = macToString(unit.mac);
-
-    switch (command) {
-      case ControlUnitCommand::START_SAMPLING:
-        commandParams["TIMESTAMP"] = String(currentSamplingSession);
-        logger->debug(String("Sending START_SAMPLING command to unit ") + macStr);
-        syncManager->sendCommand(ControlUnitCommand::START_SAMPLING, commandParams, unit.mac);
-        break;
-
-      case ControlUnitCommand::STOP_SAMPLING:
-        logger->debug(String("Sending STOP_SAMPLING command to unit ") + macStr);
-        syncManager->sendCommand(ControlUnitCommand::STOP_SAMPLING, commandParams, unit.mac);
-        break;
-
-      case ControlUnitCommand::START_SAMPLE_FILES_UPLOAD:
-        logger->debug(String("Sending START_SAMPLE_FILES_UPLOAD command to unit ") + macStr);
-        syncManager->sendCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, commandParams, unit.mac);
-        break;
-
-      case ControlUnitCommand::STOP_SAMPLE_FILES_UPLOAD:
-        logger->debug(String("Sending STOP_SAMPLE_FILES_UPLOAD command to unit ") + macStr);
-        syncManager->sendCommand(ControlUnitCommand::STOP_SAMPLE_FILES_UPLOAD, commandParams, unit.mac);
-        break;
-    }
-
-    unit.lastCommandSentMillis = millis();
-  } catch (ESPNowSyncError& error) {
-    unit.status = SamplerStatus::UNIT_ERROR;
-    return;
+  if(wirelessHandler->getCurrentMode() == WirelessHandler::MODE::ESP_NOW || wirelessHandler->isConnected()){
+      // send command via esp now
+      try{
+          syncManager->sendESPNowCommand(ControlUnitCommand::START_SAMPLING, commandParams, unit.mac);
+          unit.lastCommandSentMillis = millis();
+      }catch (ESPNowSyncError& error) {
+          unit.status = SamplerStatus::UNIT_ERROR;
+      }
+  }else if(wirelessHandler->getCurrentMode() == WirelessHandler::MODE::WIFI || wirelessHandler->isConnected()){
+      // send command via wifi
   }
 }
 
-bool SurfboardMainUnit::pingSamplingUnitDataServer(String hostname) {
-  if (!wifiHandler->isConnected()) {
-    return false;
-  }
-
-  String url = "http://" + hostname + "/ping";
-  HTTPClient http;
-  http.begin(url);
-  http.setTimeout(5);
-
-  logger->info(String("Sending ping to host ") + hostname);
-
-  int httpCode = http.GET();
-  http.end();
-
-  if (httpCode == 204) {
-    logger->info(hostname + String(" is alive and connected"));
-    return true;
-  } else {
-    logger->error(String("Failed to ping unit ") + hostname);
-    return false;
-  }
-}
-
-
-
+unsigned long LAST_WIRELESS_CONNECTION_SWITCH = 0;
+int WIRELESS_CONNECTION_SWICH_INTERVAL_MILLIS = 120000;
 void SurfboardMainUnit::loopFileUpload() {
   unsigned long current = millis();
+  WirelessHandler::MODE currentConnectionMode = wirelessHandler->getCurrentMode();
+  if((current - LAST_WIRELESS_CONNECTION_SWITCH) >= WIRELESS_CONNECTION_SWICH_INTERVAL_MILLIS){
+      logger->info("Switching connection mode, currently: " + mode_to_string(currentConnectionMode));
+      if(currentConnectionMode == WirelessHandler::MODE::WIFI){
+          wirelessHandler->switchToESPNow();
+      }else{
+          wirelessHandler->switchToWifi();
+      }
+      LAST_WIRELESS_CONNECTION_SWITCH = millis();
+      return;
+  }
+
+
   std::map<String, SamplingUnitRep>::iterator it;
+  int unitsStoppedNum = 0;
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
+    if(getStatus() == SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING && it->second.status == SamplerStatus::UNIT_STAND_BY){
+      unitsStoppedNum++;
+    }else{
+        // status == SYSTEM_SAMPLE_FILE_UPLOAD or SYSTEM_SAMPLE_FILE_UPLOAD_PARTIAL_ERROR
+    }
+
+
+
+
     if ((current - it->second.lastStatusUpdateMillis) >= STATUS_REPORT_DELAY_MILLIS) {
+      try{
+          syncManager->pingServerWifi(it->first);
+      }catch(...){
+
+      }
+      
       bool result = pingSamplingUnitDataServer(it->second.mDNSHostname);
       if (result) {
         StatusUpdateMessage statusMessage;
@@ -400,7 +328,9 @@ void SurfboardMainUnit::loopSampling() {
       updateStatus(SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR);
     }
     if (unitStatus != SamplerStatus::UNIT_SAMPLING) {
-      sendCommand(it->second, ControlUnitCommand::START_SAMPLING);
+      std::map<String, String> commandParams;
+      commandParams["TIMESTAMP"] = String(currentSamplingSession);
+      sendCommand(it->second, ControlUnitCommand::START_SAMPLING, commandParams);
     }
   }
 }
@@ -414,10 +344,8 @@ void SurfboardMainUnit::loopStandby() {
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
     SamplerStatus unitStatus = it->second.status;
     if (unitStatus == SamplerStatus::UNIT_SAMPLING) {
-      // logger->info("Unit " + it->first + " is still sampling, sending STOP_SAMPLING command");
-      // If uncommented:
-      // logger->info(F("Unit ") + String(it->first.c_str()) + F(" is still sampling, sending STOP_SAMPLING command"));
-      sendCommand(it->second, ControlUnitCommand::STOP_SAMPLING);
+      std::map<String, String> commandParams;
+      sendCommand(it->second, ControlUnitCommand::STOP_SAMPLING, commandParams);
     }
   }
 }
@@ -431,4 +359,12 @@ void SurfboardMainUnit::loopDiscoverDisconnected() {
       it->second.status = SamplerStatus::UNIT_ERROR;
     }
   }
+}
+
+void SurfboardMainUnit::loopComponents{
+  try{
+      wirelessHandler->loop();
+  }catch(...){
+    logger->error("Wireless handler error..");
+  } 
 }

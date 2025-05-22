@@ -7,7 +7,7 @@
 #include "Components/IO/RGBStatusHandler.h"
 #include "Components/IO/RTCTimeHandler.h"
 #include "Components/IO/SDCardHandler.h"
-#include "Components/IO/WifiHandler.h"
+#include "Components/IO/WirelessHandler.h"
 
 #include "Components/Sensors/SensorBase.h"
 #include "Components/Sensors/Mock_HX711.h"
