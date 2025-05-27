@@ -18,7 +18,7 @@ void ControlUnitSyncManager::broadcastESPNowCommand(const ControlUnitCommand& co
     String message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(nullptr, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
-        ControlUnitSyncManager::logger->error(F("Failed to send command"));
+        ControlUnitSyncManager::logger->error(String("Failed to send command, esp error: ") + String(esp_err_to_name(result)));
         throw ESPNowSyncError();
     } 
 }

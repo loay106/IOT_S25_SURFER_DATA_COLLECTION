@@ -81,7 +81,9 @@ void SurfboardMainUnit::startSampling() {
   std::map<String, String> samplingParams;
   samplingParams["TIMESTAMP"] = String(currentSamplingSession);
   try {
-    syncManager->broadcastESPNowCommand(ControlUnitCommand::START_SAMPLING, samplingParams);
+    if(!samplingUnits.empty()){
+        syncManager->broadcastESPNowCommand(ControlUnitCommand::START_SAMPLING, samplingParams);
+    }
   } catch (ESPNowSyncError& error) {
     logger->error(F("Failed to send command to sampling units! Try again!"));
     updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
@@ -107,7 +109,9 @@ void SurfboardMainUnit::stopSampling() {
 
   try {
     std::map<String, String> params;
-    syncManager->broadcastESPNowCommand(ControlUnitCommand::STOP_SAMPLING, params);
+      if(!samplingUnits.empty()){
+          syncManager->broadcastESPNowCommand(ControlUnitCommand::STOP_SAMPLING, params);
+      } 
   } catch (ESPNowSyncError& error) {
     logger->error(F("Failed to send command STOP_SAMPLING to sampling units!"));
     sampler->stopSampling();
@@ -127,21 +131,21 @@ void SurfboardMainUnit::stopSampling() {
 
 
 void SurfboardMainUnit::startSampleFilesUpload() {
-  logger->info(F("File upload starting..."));
-
   if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
       wirelessHandler->switchToESPNow();
       updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
+      logger->info(F("Failed to start file upload because esp now is not connected. Try again later..."));
       return;
   }
 
   std::map<String, String> params;
   params["WIFI_SSID"] = WIFI_SSID;
   params["WIFI_PASSWORD"] = WIFI_PASSWORD;
-
   for (int i = 0; i < 3; i++) {
     try {
-      syncManager->broadcastESPNowCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
+      if(!samplingUnits.empty()){
+          syncManager->broadcastESPNowCommand(ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, params);
+      }
     } catch (ESPNowSyncError& error) {
       logger->error(F("Failed to send command to sampling units! Try again!"));
       updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
@@ -154,11 +158,8 @@ void SurfboardMainUnit::startSampleFilesUpload() {
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
     it->second.lastCommandSentMillis = current;
   }
-
-  delay(200);  // give some time for units to respond
-
   server->begin();
-  logger->info(String("File upload starting..."));
+  logger->info(String("File upload started..."));
   updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
 }
 
@@ -184,6 +185,8 @@ void SurfboardMainUnit::handleButtonPress() {
         break;
 
       case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
+      case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
+      case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR:
         logger->debug(F("Soft or long press detected while file uploading"));
         stopSampleFilesUpload();
         break;
@@ -198,7 +201,6 @@ void SurfboardMainUnit::handleButtonPress() {
           startSampleFilesUpload();
         }
         break;
-      case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
       case SystemStatus::SYSTEM_ERROR:
           logger->debug("Press was ignored while on file upload stopping or general error");
     }

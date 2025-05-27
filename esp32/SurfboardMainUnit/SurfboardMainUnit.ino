@@ -6,15 +6,16 @@ RGBStatusHandler* statusLighthandler;
 vector<uint8_t*> samplingUnitsMacAddresses;
 Logger* logger;
 SDCardHandler* sdCardHandler;
+WirelessHandler* wirelessHandler;
 // ******************************* END OF GLOBAL VARIABLES ******************************
 
 
 // ******************************* UNIT CONFIG - EDIT HERE ******************************
 void addSamplingUnits(){
     // define and add your sampling units here...
-    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0});
-    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68});
-    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64});
+  //  samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0});
+  //  samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68});
+  //  samplingUnitsMacAddresses.push_back(new uint8_t[6]{0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64});
 }
 
 void addSensors(vector<String> sensorsParams){
@@ -83,7 +84,7 @@ void setup() {
     addSamplingUnits();
     
     ControlUnitSyncManager* syncManager = ControlUnitSyncManager::getInstance();
-    WirelessHandler* wirelessHandler = new WirelessHandler(logger, WIFI_SSID, WIFI_PASSWORD, ESP_NOW_CHANNEL, samplingUnitsMacAddresses, ControlUnitSyncManager::processReceivedESPNowMessages);
+    wirelessHandler = new WirelessHandler(logger, WIFI_SSID, WIFI_PASSWORD, ESP_NOW_CHANNEL, samplingUnitsMacAddresses, ControlUnitSyncManager::processReceivedESPNowMessages);
     RTCTimeHandler* timeHandler = new RTCTimeHandler(logger);
     ButtonHandler* buttonHandler = new ButtonHandler(logger, buttonPin);
 
@@ -104,11 +105,11 @@ void setup() {
         statusLighthandler->updateColors(RGBColors::RED, RGBColors::RED);
         while(true){delay(500);};
     }
-    try{
+    if(wirelessHandler->getCurrentMode() == WirelessHandler::MODE::OFF){
         wirelessHandler->switchToESPNow();
-    }catch(ESPNowSyncError& err){
-        logger->info("Failed to connect to esp-now! Retrying...");
-        delay(500);
+        while(!wirelessHandler->isConnected()){
+            wirelessHandler->loop();
+        }
     }
     logger->info("System init complete!");
 }

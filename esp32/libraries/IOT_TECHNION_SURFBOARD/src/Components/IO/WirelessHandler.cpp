@@ -12,7 +12,7 @@ WirelessHandler::WirelessHandler(Logger* logger, const String& _wifiSSID, const 
         peerInfo->encrypt = false;
         this->esp_now_peers.push_back(peerInfo);
     }
-    this->esp_rec_ballback = esp_rec_ballback;
+    this->esp_rec_ballback = _esp_rec_ballback;
     this->currentMode = WirelessHandler::MODE::OFF;
     this->currentStatus = WirelessHandler::STATUS::DISCONNECTED;
     this->timeToDelayMillis = 0;
@@ -154,7 +154,7 @@ void WirelessHandler::disconnectEspNow(){
 }
 
 void WirelessHandler::connectEspNow(){
-    WiFi.disconnect(true);
+    //WiFi.disconnect(true);
     WiFi.mode(WIFI_STA);
     if(esp_now_init() != ESP_OK){
         throw ESPNowSyncError();
