@@ -72,7 +72,7 @@ void setup() {
     vector<String> sensorsParams;
 
     try{
-        std::map<String, String> configMap = sdCardHandler->readConfigFile("//unit.config");
+        std::map<String, String> configMap = sdCardHandler->readConfigFile("//main.config");
         WIFI_SSID = configMap["WIFI_SSID"];
         WIFI_PASSWORD = configMap["WIFI_PASSWORD"];
         sensorsParams = parseSensorParams(configMap["SENSORS_PARAMS"]);
