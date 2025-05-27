@@ -26,7 +26,10 @@ void SensorBase::stopSampling(){
     flushSamplesBuffer(true);
     samplingFileName = "";
     unsigned long timeElapsed = (millis() - samplingStartMillis)/1000;
-    int rate = samplesCount/timeElapsed;
+    int rate = 0;
+    if(timeElapsed > 0){
+        rate = samplesCount/timeElapsed;
+    }
     String message = String("Wrote ") + String(samplesCount) + " samples in " + String(timeElapsed) + " seconds. Sensor's rate: " + String(rate) + " Hz";
     logger->info(message);
     samplesCount=0;

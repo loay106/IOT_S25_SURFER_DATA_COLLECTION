@@ -135,7 +135,7 @@ void WirelessHandler::connectWifi(){
     if(WiFi.status() == WL_CONNECTED){
         return;
     }else{
-        logger->info("Starting WiFi connection...");
+        logger->info("Starting WiFi connection...Connecting to " + wifi_ssid);
         WiFi.mode(WIFI_STA);
         WiFi.setAutoReconnect(true);
         WiFi.persistent(true);
