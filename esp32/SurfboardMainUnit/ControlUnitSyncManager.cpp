@@ -15,9 +15,6 @@ void ControlUnitSyncManager::sendESPNowCommand(const ControlUnitCommand& command
 }
 
 void ControlUnitSyncManager::broadcastESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params){
-    if(ControlUnitSyncManager::peers.size() == 0){
-        return;
-    }
     String message = serializeCommand(command, params);
     esp_err_t result = esp_now_send(nullptr, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
@@ -49,7 +46,7 @@ void ControlUnitSyncManager::pingServerWifi(const String& unitMac){
   http.begin(url);
   http.setTimeout(10);
   logger->info("Sending stop upload to host " + hostname);
-  int httpCode = http.GET("");
+  int httpCode = http.GET();
   http.end();
   if (httpCode == 204) {
     logger->info(hostname + " received command correctly!");
@@ -85,8 +82,7 @@ StatusUpdateMessage ControlUnitSyncManager::popStatusUpdateMessage() {
     return msg;
 }
 
-void ControlUnitSyncManager::processReceivedMessages(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
-{
+void ControlUnitSyncManager::processReceivedESPNowMessages(const uint8_t *mac_addr, const uint8_t *incomingData, int len){
     try{
         SamplingUnitStatusMessage status = deserializeStatusUpdateMsg(incomingData, len);
                 // Create StatusUpdateMessage

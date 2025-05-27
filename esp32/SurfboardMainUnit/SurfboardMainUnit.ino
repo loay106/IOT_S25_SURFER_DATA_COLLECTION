@@ -1,7 +1,16 @@
 #include "SurfboardMainUnit.h"
 
+// ******************************* GLOBAL VARIABLES *************************************
+SurfboardMainUnit* mainUnit;
+RGBStatusHandler* statusLighthandler;
+vector<uint8_t*> samplingUnitsMacAddresses;
+Logger* logger;
+SDCardHandler* sdCardHandler;
+// ******************************* END OF GLOBAL VARIABLES ******************************
+
+
 // ******************************* UNIT CONFIG - EDIT HERE ******************************
-void addSamplingUnits(vector<uint8_t*> samplingUnitsMacAddresses){
+void addSamplingUnits(){
     // define and add your sampling units here...
     samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0});
     samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68});
@@ -33,12 +42,6 @@ int RGBBluePin = 27;
 int buttonPin = 4;
 int ESP_NOW_CHANNEL = 0;
 
-// globals
-SurfboardMainUnit* mainUnit;
-Logger* logger;
-RGBStatusHandler* statusLighthandler;
-vector<uint8_t*> samplingUnitsMacAddresses;
-
 void setup() {
     logger = Logger::getInstance();
     logger->init(serialBaudRate);
@@ -55,7 +58,7 @@ void setup() {
         while(true){delay(500);};
     }
 
-    SDCardHandler* sdCardHandler = new SDCardHandler(SDCardChipSelectPin, logger);
+    sdCardHandler = new SDCardHandler(SDCardChipSelectPin, logger);
     try{
         sdCardHandler->init();
     }catch(InitError& err){
@@ -94,8 +97,8 @@ void setup() {
         timeHandler->init();
         buttonHandler->init();
         sampler->init();
-        mainUnit->init(samplingUnitsMacAddresses, 1);
-        addSensors();
+        mainUnit->init(samplingUnitsMacAddresses);
+        addSensors(sensorsParams);
     }catch(InitError& err){
         logger->error("Init error! Check your wiring!");
         statusLighthandler->updateColors(RGBColors::RED, RGBColors::RED);
@@ -103,7 +106,6 @@ void setup() {
     }
     try{
         wirelessHandler->switchToESPNow();
-        break;
     }catch(ESPNowSyncError& err){
         logger->info("Failed to connect to esp-now! Retrying...");
         delay(500);
@@ -121,17 +123,18 @@ void loop() {
         switch(status){
           case SystemStatus::SYSTEM_STAND_BY:
           case SystemStatus::SYSTEM_STARTING:
+          case SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR:
             mainUnit->loopStandby();
             delay(10);
             break;
           case SystemStatus::SYSTEM_SAMPLING:
           case SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR:
             mainUnit->loopSampling();
-            break;
+            break;         
           case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
-          case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_PARTIAL_ERROR:
-            mainUnit->loopFileUpload();
-            delay(5);
+          case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
+          case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR:
+            mainUnit->loopFileUpload(status);
             break;
           case SystemStatus::SYSTEM_ERROR: 
             statusLighthandler->updateColors(RGBColors::RED, RGBColors::RED);

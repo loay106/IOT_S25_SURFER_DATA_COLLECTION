@@ -17,6 +17,7 @@ WirelessHandler::WirelessHandler(Logger* logger, const String& _wifiSSID, const 
     this->currentStatus = WirelessHandler::STATUS::DISCONNECTED;
     this->timeToDelayMillis = 0;
     this->delayStartTimeMillis = 0;
+    this->currentModeStartTime - 0;
 }
 
 WirelessHandler::MODE WirelessHandler::getCurrentMode(){
@@ -25,15 +26,19 @@ WirelessHandler::MODE WirelessHandler::getCurrentMode(){
 }
 
 void WirelessHandler::switchToWifi(){
-    logger->info("Switching to WiFi connection...");
-    this->currentMode = WirelessHandler::MODE::WIFI;
-    loop();
+    if(this->currentMode != WirelessHandler::MODE::WIFI){
+        logger->info("Switching to WiFi connection...");
+        currentModeStartTime = millis();
+        this->currentMode = WirelessHandler::MODE::WIFI;
+    }
 }
 
 void WirelessHandler::switchToESPNow(){
+    if(this->currentMode != WirelessHandler::MODE::ESP_NOW){
     logger->info("Switching to ESP NOW connection...");
-    this->currentMode = WirelessHandler::MODE::ESP_NOW;
-    loop();
+        currentModeStartTime = millis();
+        this->currentMode = WirelessHandler::MODE::ESP_NOW;
+    }
 }
 
 bool WirelessHandler::isConnected(){
@@ -49,6 +54,10 @@ String WirelessHandler::getMacAddress(){
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
     return macToString(mac);
+}
+
+unsigned long WirelessHandler::getCurrentModeStartTime(){
+    return currentModeStartTime;
 }
 
 void WirelessHandler::loop(){

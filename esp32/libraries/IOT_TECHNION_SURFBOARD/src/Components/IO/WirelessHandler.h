@@ -29,6 +29,7 @@ class WirelessHandler{
     bool isConnected();
     String getIP();
     String getMacAddress();
+    unsigned long getCurrentModeStartTime();
       
     void loop();
 
@@ -59,6 +60,7 @@ class WirelessHandler{
         Logger* logger;
         int timeToDelayMillis;
         int delayStartTimeMillis;
+        unsigned long currentModeStartTime;
 
         void disconnectWifi();
         void connectWifi();

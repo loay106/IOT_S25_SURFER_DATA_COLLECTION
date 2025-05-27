@@ -31,7 +31,7 @@ inline std::vector<String> parseSensorParams(const String& input) {
     return result;
 }
 
-String mode_to_string(WirelessHandler::MODE mode){
+inline String mode_to_string(WirelessHandler::MODE mode){
     switch(mode){
         case WirelessHandler::MODE::OFF:
           return "OFF";

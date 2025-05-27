@@ -11,6 +11,9 @@ using namespace std;
 
 const int COMMAND_SEND_MIN_INTERVAL_MILLIS = 500; 
 const int MAX_STATUS_UPDATE_DELAY = 3000;
+const int FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS = 5000;
+const int WIFI_CONNECTION_RETRY_TIMEOUT_MILLIS = 6000;
+const int FILE_UPLOAD_STOP_CONNECTION_SWITCH_INTERVAL = 5000;
 
 typedef struct SamplingUnitRep{
     uint8_t mac[6];
@@ -46,7 +49,7 @@ class SurfboardMainUnit {
         void startSampleFilesUpload();
         void stopSampleFilesUpload();
 
-        void sendCommand(SamplingUnitRep& unit, ControlUnitCommand command, std::map<String, String> commandParams);        
+        void sendESPNowCommand(SamplingUnitRep& unit, ControlUnitCommand command, std::map<String, String> commandParams);        
     public:
         SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WirelessHandler* wirelessHandler, DataCollectorServer* server);
         void init(vector<uint8_t*> samplingUnitsMacAddresses);
@@ -58,7 +61,7 @@ class SurfboardMainUnit {
         void readStatusUpdateMessages();
         
         void loopSampling();
-        void loopFileUpload();
+        void loopFileUpload(SystemStatus status);
         void loopStandby();
         void loopDiscoverDisconnected();
 
