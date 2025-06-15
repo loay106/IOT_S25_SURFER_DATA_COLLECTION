@@ -12,14 +12,16 @@ class SurfboardSamplingUnit {
         SamplingUnitSyncManager* syncManager;
         Logger* logger;
         SDCardHandler* sdCardHandler;
+        WirelessHandler* wirelessHandler;
         int lastStatusReportTime;
     public:
-        SurfboardSamplingUnit(SamplingUnitSyncManager* syncManager, SDCardHandler* sdCardHandler, Sampler* sampler, Logger* logger);
+        SurfboardSamplingUnit(WirelessHandler* wirelessHandler, SamplingUnitSyncManager* syncManager, SDCardHandler* sdCardHandler, Sampler* sampler, Logger* logger);
         void addSensor(SensorBase* sensor);
         SamplerStatus getStatus();
         void handleNextCommand();
         void loopSampling();
         void loopFileUpload();
         void reportStatus(SamplingUnitStatusMessage status_message , bool force=false);
+        void loopComponents();
 };
 #endif // SURFBOARD_SAMPLING_UNIT_H

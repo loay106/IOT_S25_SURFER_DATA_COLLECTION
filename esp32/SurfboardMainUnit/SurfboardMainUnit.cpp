@@ -1,6 +1,6 @@
 #include "SurfboardMainUnit.h"
 
-SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler, WirelessHandler* wirelessHandler, DataCollectorServer* server) {
+SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler, WirelessHandler* wirelessHandler, const String& _wifiSSID, const String& _wifiPassword, DataCollectorServer* server) {
   this->logger = logger;
   this->syncManager = syncManager;
   this->timeHandler = timeHandler;
@@ -12,6 +12,8 @@ SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTim
   this->wirelessHandler = wirelessHandler;
   this->server = server;
   status = SystemStatus::SYSTEM_STARTING;
+  this->WIFI_SSID = _wifiSSID;
+  this->WIFI_PASSWORD = _wifiPassword;
   currentSamplingSession = 0;
 }
 
@@ -269,7 +271,7 @@ void SurfboardMainUnit::loopFileUpload(SystemStatus status) {
   // handle invalid wifi connection here
   if(status == SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR){
     if(currentConnectionMode != WirelessHandler::MODE::WIFI){
-        wirelessHandler->switchToWifi();
+        wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
     }else if(wirelessHandler->isConnected()){
         updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
     }
@@ -314,7 +316,7 @@ void SurfboardMainUnit::loopFileUpload(SystemStatus status) {
           }
       } else if(currentConnectionMode == WirelessHandler::MODE::ESP_NOW){
         if((current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
-            wirelessHandler->switchToWifi();
+            wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
             return;
         }else if(wirelessHandler->isConnected()){
             std::map<String, SamplingUnitRep>::iterator it;
@@ -334,7 +336,7 @@ void SurfboardMainUnit::loopFileUpload(SystemStatus status) {
           if(currentConnectionMode == WirelessHandler::MODE::WIFI){
               wirelessHandler->switchToESPNow();
           }else{
-              wirelessHandler->switchToWifi();
+              wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
           }
           return;
       }

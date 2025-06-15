@@ -17,16 +17,11 @@ class SamplingUnitSyncManager {
         esp_now_peer_info_t* controlUnitPeer;
         uint8_t controlUnitMac[6];
         static Logger* logger;
-        bool isConnected;
-        int channel;
 
         static SamplingUnitSyncManager* instance;
 
-        SamplingUnitSyncManager(){
-            isConnected=false;
-            channel=0; // default channel
-        };
-        static void onDataReceivedCallback(const uint8_t *mac_addr, const uint8_t* incomingData, int len);
+        SamplingUnitSyncManager(){};
+        
     public:
         SamplingUnitSyncManager(const SamplingUnitSyncManager& obj) = delete;
         static SamplingUnitSyncManager* getInstance() {
@@ -36,12 +31,9 @@ class SamplingUnitSyncManager {
             return instance;
         }
 
-        void init(uint8_t controlUnitMac[], int channel);
-        void connect();
-        void disconnect();
         void reportStatus(SamplingUnitStatusMessage status);
         static void setNextCommand(CommandMessage cmd);
-
+        static void onDataReceivedCallback(const uint8_t *mac_addr, const uint8_t* incomingData, int len);
         CommandMessage getNextCommand();
 
 };

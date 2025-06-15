@@ -1,21 +1,49 @@
 #include "SurfboardSamplingUnit.h"
 
-// constants
-int serialBaudRate = 115200;
-int SDCardChipSelectPin = 5;
+// ******************************* GLOBAL VARIABLES *************************************
+SurfboardSamplingUnit* samplingUnit; 
+// ******************************* END OF GLOBAL VARIABLES ******************************
+
+// ******************************* UNIT CONFIG - EDIT HERE ******************************
 uint8_t CONTROL_UNIT_MAC[6] = {0xA8, 0x42, 0xE3, 0x46, 0xE0, 0x64};
 
-int doutPin = 12;
- int sckPin = 13;
+void addSensors(vector<String> sensorsParams){
+    /*  add sensors here...
+        you can pass params from the config file in the sd card
+        sensor[i] should have the param in sensorsParams[i]
+    */
+    Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);
+    Mock_HX711* mock_force_1 = new Mock_HX711(logger,sdCardHandler, 1000);
+    Mock_HX711* mock_force_2 = new Mock_HX711(logger,sdCardHandler, 1000);
 
-// globals
-SurfboardSamplingUnit* samplingUnit; 
+    mock_force_0->init();
+    mock_force_1->init();
+    mock_force_2->init();
+
+    samplingUnit->addSensor(mock_force_0);
+    samplingUnit->addSensor(mock_force_1);
+    samplingUnit->addSensor(mock_force_2);
+}
+// ******************************* END OF UNIT CONFIG ***********************************
+
+// ******************************* PARAMETERS *******************************************
+int doutPin = 12;
+int sckPin = 13;
+int serialBaudRate = 115200;
+int SDCardChipSelectPin = 5;
+int ESP_NOW_CHANNEL = 0;
+// ******************************* END PARAMETERS ***************************************
+
 
 void setup() {
-    Logger* logger = Logger::getInstance();
+    logger = Logger::getInstance();
     logger->init(serialBaudRate);
     logger->setLogLevel(LogLevel::DEBUG);
-    SDCardHandler* sdCardHandler = new SDCardHandler(SDCardChipSelectPin, logger);
+    delay(200);
+
+    logger->info("Sampling unit init starting...");
+
+    sdCardHandler = new SDCardHandler(SDCardChipSelectPin, logger);
     try{
         sdCardHandler->init();
     }catch(InitError& err){
@@ -23,89 +51,39 @@ void setup() {
         while(true){delay(500);};
     }
 
-    String WIFI_SSID = "";
-    String WIFI_PASSWORD = "";
     vector<String> sensorsParams;
-    int WIFI_ESP_NOW_CHANNEL = 0;
-
     try{
-        std::map<String, String> configMap = sdCardHandler->readConfigFile("/unit.config");
-        WIFI_SSID = configMap["WIFI_SSID"];
-        WIFI_PASSWORD = configMap["WIFI_PASSWORD"];
+        std::map<String, String> configMap = sdCardHandler->readConfigFile("//unit.config");
         sensorsParams = parseSensorParams(configMap["SENSORS_PARAMS"]);
     }catch(exception& e){
-        logger->error("Error reading config file! Place unit.config in your sd card top level with the required configs!");
+        logger->error("Error reading config file!");
         while(true){delay(500);};
     }
 
-
-    WifiHandler* wifiHandler = new WifiHandler(WIFI_SSID, WIFI_PASSWORD);
-    while(true){
-        try{
-            logger->info("Checking wifi connection...");
-            wifiHandler->init();
-            wifiHandler->connect();
-            logger->info("Wifi connection established!");
-            WIFI_ESP_NOW_CHANNEL = wifiHandler->getChannel();
-            logger->info("Setting ESP now channel to " + String(WIFI_ESP_NOW_CHANNEL));
-            wifiHandler->disconnect();
-            logger->info("Wifi disconnected!");
-            break;
-        }catch(...){
-            logger->error("Wifi connection failed! Please check your wifi ssid and password!");
-            delay(3000);
-        }
-    }
-
-    CloudSyncManager* cloudSyncManager = new CloudSyncManager(logger, wifiHandler, wifiHandler->getMacAddress());
     Sampler* sampler = new Sampler(logger, sdCardHandler, cloudSyncManager);
-
+    vector<uint8_t*> mainUnitsMacAddress;
+    mainUnitsMacAddress.push_back(CONTROL_UNIT_MAC);
+    WirelessHandler* wirelessHandler = new WirelessHandler(logger, ESP_NOW_CHANNEL, mainUnitsMacAddress, SamplingUnitSyncManager::onDataReceivedCallback);
     SamplingUnitSyncManager* syncManager = SamplingUnitSyncManager::getInstance();
-    samplingUnit = new SurfboardSamplingUnit(syncManager,sdCardHandler,sampler, logger);
-
-    // declare sensors here....
-    //Force_HX711* sensor0 = new Force_HX711(logger,sdCardHandler,stoi(sensorsParams[0]) ,doutPin,sckPin);
-    //IMU_BNO080* sensor1 = new IMU_BNO080(logger, sdCardHandler,stoi(sensorsParams[1]));
-    Mock_HX711* mock_force_2 = new Mock_HX711(logger,sdCardHandler, 1000);
-    Mock_HX711* mock_force_3 = new Mock_HX711(logger,sdCardHandler, 1000);
-    Mock_HX711* mock_force_4 = new Mock_HX711(logger,sdCardHandler, 1000);
+    samplingUnit = new SurfboardSamplingUnit(wirelessHandler, syncManager,sdCardHandler,sampler, logger);
 
     try{
         // don't change the order of the init
         logger->init(serialBaudRate);
-        syncManager->init(CONTROL_UNIT_MAC, WIFI_ESP_NOW_CHANNEL);
+        addSensors(sensorsParams);
         sampler->init();
-        // init sensors here..
-       // sensor0->init();
-        //sensor1->init();
-        mock_force_2->init();
-        mock_force_3->init();
-        mock_force_4->init();
     }catch(InitError& err){
         while(true){
             // don't proceed, there's a wiring error!
             logger->error("Init error! Check your wiring!");
             delay(100);
         }
-    }
-
-    // add sensors here....
-   // samplingUnit->addSensor(sensor0);
-   // samplingUnit->addSensor(sensor1);
-    samplingUnit->addSensor(mock_force_2);
-    samplingUnit->addSensor(mock_force_3);
-    samplingUnit->addSensor(mock_force_4);
-
-    try{
-        syncManager->connect();
-    }catch(ESPNowSyncError& err){
-        while(true){delay(500);};
-    }
-    
+    }    
     logger->info("Unit setup complete!");
 }
 
 void loop() {
+    samplingUnit->loopComponents();
     samplingUnit->handleNextCommand();
     SamplerStatus status = samplingUnit->getStatus();
     switch(status){
@@ -125,8 +103,7 @@ void loop() {
             break;
     }
 
-    switch (status)
-    {
+    switch (status){
         case UNIT_STAND_BY:
             samplingUnit->reportStatus(SamplingUnitStatusMessage::STAND_BY);
             break;

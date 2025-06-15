@@ -1,10 +1,11 @@
 #include "SurfboardSamplingUnit.h"
 
-SurfboardSamplingUnit::SurfboardSamplingUnit(SamplingUnitSyncManager *syncManager, SDCardHandler *sdCardHandler, Sampler *sampler, Logger *logger){
+SurfboardSamplingUnit::SurfboardSamplingUnit(WirelessHandler* wirelessHandler, SamplingUnitSyncManager *syncManager, SDCardHandler *sdCardHandler, Sampler *sampler, Logger *logger){
     this->syncManager=syncManager;
     this->sdCardHandler=sdCardHandler;
     this->sampler=sampler;
-    this->sdCardHandler;
+    this->wirelessHandler = wirelessHandler;
+    this->logger = logger;
     lastStatusReportTime = 0;
 }
 
@@ -16,12 +17,6 @@ SamplerStatus SurfboardSamplingUnit::getStatus(){
     SamplerStatus stat = sampler->getStatus();
     return stat;
 }
-
-/*void SamplerFileUploadTask(void *param) {
-    Sampler* samp = static_cast<Sampler*>(param);
-    samp->uploadSampleFiles();
-    vTaskDelete(NULL);
-}*/
 
 void SurfboardSamplingUnit::handleNextCommand(){
   // todo: add status report here after each command handling
@@ -141,4 +136,12 @@ void SurfboardSamplingUnit::reportStatus(SamplingUnitStatusMessage status_messag
         syncManager->reportStatus(status_message);
         lastStatusReportTime = currentTime;     
     }
+}
+
+void SurfboardSamplingUnit::loopComponents(){
+  try{
+      wirelessHandler->loop();
+  }catch(...){
+    logger->error("Wireless handler error..");
+  } 
 }

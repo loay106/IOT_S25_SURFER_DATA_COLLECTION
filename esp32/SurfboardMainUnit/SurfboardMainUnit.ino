@@ -34,7 +34,7 @@ void addSensors(vector<String> sensorsParams){
 
 // ******************************* END OF UNIT CONFIG ***********************************
 
-// parameters
+// ******************************* PARAMETERS *******************************************
 uint8_t SDCardChipSelectPin = 5;
 int serialBaudRate = 115200;
 int RGBRedPin = 25;
@@ -42,6 +42,7 @@ int RGBGreenPin = 26;
 int RGBBluePin = 27;
 int buttonPin = 4;
 int ESP_NOW_CHANNEL = 0;
+// ******************************* END PARAMETERS ***************************************
 
 void setup() {
     logger = Logger::getInstance();
@@ -84,14 +85,14 @@ void setup() {
     addSamplingUnits();
     
     ControlUnitSyncManager* syncManager = ControlUnitSyncManager::getInstance();
-    wirelessHandler = new WirelessHandler(logger, WIFI_SSID, WIFI_PASSWORD, ESP_NOW_CHANNEL, samplingUnitsMacAddresses, ControlUnitSyncManager::processReceivedESPNowMessages);
+    wirelessHandler = new WirelessHandler(logger, ESP_NOW_CHANNEL, samplingUnitsMacAddresses, ControlUnitSyncManager::processReceivedESPNowMessages);
     RTCTimeHandler* timeHandler = new RTCTimeHandler(logger);
     ButtonHandler* buttonHandler = new ButtonHandler(logger, buttonPin);
 
     Sampler* sampler = new Sampler(logger, sdCardHandler);
     String ownMacAddress = wirelessHandler->getMacAddress();
     DataCollectorServer* server = new DataCollectorServer(sdCardHandler, ownMacAddress, true);
-    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wirelessHandler, server);
+    mainUnit = new SurfboardMainUnit(syncManager, timeHandler, statusLighthandler, buttonHandler, logger, sampler, sdCardHandler, wirelessHandler, WIFI_SSID, WIFI_PASSWORD, server);
 
     try{
         // don't change the order of the init
