@@ -84,7 +84,7 @@ StatusUpdateMessage ControlUnitSyncManager::popStatusUpdateMessage() {
 
 void ControlUnitSyncManager::processReceivedESPNowMessages(const uint8_t *mac_addr, const uint8_t *incomingData, int len){
     try{
-        SamplingUnitStatusMessage status = deserializeStatusUpdateMsg(incomingData, len);
+        SamplerStatus status = deserializeStatusUpdateMsg(incomingData, len);
                 // Create StatusUpdateMessage
         StatusUpdateMessage statusMessage;
         memcpy(statusMessage.from, mac_addr, 6);

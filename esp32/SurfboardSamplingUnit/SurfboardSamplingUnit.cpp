@@ -6,6 +6,7 @@ SurfboardSamplingUnit::SurfboardSamplingUnit(WirelessHandler* wirelessHandler, S
     this->sampler=sampler;
     this->wirelessHandler = wirelessHandler;
     this->logger = logger;
+    this->status = SamplerStatus::UNIT_STAND_BY;
     lastStatusReportTime = 0;
 }
 
@@ -22,7 +23,7 @@ void SurfboardSamplingUnit::handleNextCommand(){
   // todo: add status report here after each command handling
     try{
         CommandMessage command = syncManager->getNextCommand();
-        SamplerStatus samp_status= sampler->getStatus();
+        SamplerStatus samp_status = sampler->getStatus();
         switch(command.command){
             case ControlUnitCommand::START_SAMPLING:
                 try{
@@ -131,8 +132,7 @@ void SurfboardSamplingUnit::loopFileUpload(){
 void SurfboardSamplingUnit::reportStatus(SamplingUnitStatusMessage status_message , bool force ){
     unsigned long currentTime = millis(); 
     SamplerStatus currentStatus = sampler->getStatus();
-    if ( (currentTime - lastStatusReportTime >= STATUS_REPORT_DELAY_MILLIS) || force ) 
-    {
+    if ( (currentTime - lastStatusReportTime >= STATUS_REPORT_DELAY_MILLIS) || force ) {
         syncManager->reportStatus(status_message);
         lastStatusReportTime = currentTime;     
     }

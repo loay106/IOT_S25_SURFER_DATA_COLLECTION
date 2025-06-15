@@ -2,11 +2,11 @@
 
 const int STATUS_REPORT_DELAY_MILLIS = 500;
 
-String serializeStatusUpdateMsg(SamplingUnitStatusMessage status) {
+String serializeStatusUpdateMsg(SamplerStatus status) {
     return String((int)status);
 }
 
-SamplingUnitStatusMessage deserializeStatusUpdateMsg(const uint8_t* msg, int len) {
+SamplerStatus deserializeStatusUpdateMsg(const uint8_t* msg, int len) {
     if (msg == nullptr || len <= 0) {
         throw InvalidSyncMessage();
     }
@@ -14,11 +14,11 @@ SamplingUnitStatusMessage deserializeStatusUpdateMsg(const uint8_t* msg, int len
     String statusStr(reinterpret_cast<const char*>(msg), len);
     int statusValue = statusStr.toInt();
 
-    if (statusValue < STAND_BY || statusValue > ERROR) {
+    if (statusValue < UNIT_STAND_BY || statusValue > UNIT_ERROR) {
         throw InvalidSyncMessage();
     }
 
-    return static_cast<SamplingUnitStatusMessage>(statusValue);
+    return static_cast<SamplerStatus>(statusValue);
 }
 
 String serializeCommand(const ControlUnitCommand& command, const std::map<String, String>& params) {

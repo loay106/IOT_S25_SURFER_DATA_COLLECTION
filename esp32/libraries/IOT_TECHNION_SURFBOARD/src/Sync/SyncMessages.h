@@ -16,13 +16,6 @@ enum ControlUnitCommand {
     STOP_SAMPLE_FILES_UPLOAD,
 };
 
-enum SamplingUnitStatusMessage {
-    STAND_BY,
-    SAMPLING,
-    SAMPLE_FILES_UPLOAD,
-    ERROR,
-};
-
 typedef struct CommandMessage {
     ControlUnitCommand command;
     std::map<String, String> params;
@@ -30,11 +23,11 @@ typedef struct CommandMessage {
 
 typedef struct StatusUpdateMessage {
     uint8_t from[6];
-    SamplingUnitStatusMessage status;
+    SamplerStatus status;
 } StatusUpdateMessage;
 
-String serializeStatusUpdateMsg(SamplingUnitStatusMessage status);
-SamplingUnitStatusMessage deserializeStatusUpdateMsg(const uint8_t* msg, int len);
+String serializeStatusUpdateMsg(SamplerStatus status);
+SamplerStatus deserializeStatusUpdateMsg(const uint8_t* msg, int len);
 
 String serializeCommand(const ControlUnitCommand& command, const std::map<String, String>& params);
 CommandMessage deserializeCommand(const uint8_t* msg, int len);

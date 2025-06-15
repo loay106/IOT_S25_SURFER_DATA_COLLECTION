@@ -13,6 +13,7 @@ class SurfboardSamplingUnit {
         Logger* logger;
         SDCardHandler* sdCardHandler;
         WirelessHandler* wirelessHandler;
+        SamplerStatus status;
         int lastStatusReportTime;
     public:
         SurfboardSamplingUnit(WirelessHandler* wirelessHandler, SamplingUnitSyncManager* syncManager, SDCardHandler* sdCardHandler, Sampler* sampler, Logger* logger);

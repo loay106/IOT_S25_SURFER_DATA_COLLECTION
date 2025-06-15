@@ -218,28 +218,8 @@ void SurfboardMainUnit::readStatusUpdateMessages() {
     try {
       SamplingUnitRep& samplingUnit = samplingUnits.at(unitID);
       samplingUnit.lastStatusUpdateMillis = millis();
-
-      switch (statusMessage.status) {
-        case SamplingUnitStatusMessage::STAND_BY:
-          samplingUnit.status = SamplerStatus::UNIT_STAND_BY;
-          logger->info("Unit " + unitID + " reported STAND BY");
-          break;
-
-        case SamplingUnitStatusMessage::SAMPLING:
-          samplingUnit.status = SamplerStatus::UNIT_SAMPLING;
-          logger->info("Unit " + unitID + " reported SAMPLING");
-          break;
-
-        case SamplingUnitStatusMessage::SAMPLE_FILES_UPLOAD:
-          samplingUnit.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
-          logger->info("Unit " + unitID + " reported SAMPLING FILE UPLOADING");
-          break;
-
-        case SamplingUnitStatusMessage::ERROR:
-          samplingUnit.status = SamplerStatus::UNIT_ERROR;
-          logger->info("Unit " + unitID + " reported ERROR");
-          break;
-      }
+      samplingUnit.status = statusMessage.status;
+      logger->info("Unit " + unitID + " reported " + sampler_status_to_string(statusMessage.status));
     } catch (const std::out_of_range& ex) {
       logger->error("Status update message received from unknown unit " + unitID);
     }
@@ -299,13 +279,13 @@ void SurfboardMainUnit::loopFileUpload(SystemStatus status) {
                         syncManager->pingServerWifi(it->first);
                         StatusUpdateMessage statusMessage;
                         memcpy(statusMessage.from, it->second.mac, 6);
-                        statusMessage.status = SamplingUnitStatusMessage::SAMPLE_FILES_UPLOAD;
+                        statusMessage.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
                         syncManager->addStatusUpdateMessage(statusMessage);
                     }
                 }catch(...){
                         StatusUpdateMessage statusMessage;
                         memcpy(statusMessage.from, it->second.mac, 6);
-                        statusMessage.status = SamplingUnitStatusMessage::ERROR;
+                        statusMessage.status = SamplerStatus::UNIT_ERROR;
                         syncManager->addStatusUpdateMessage(statusMessage);
                 }
             }
@@ -349,12 +329,12 @@ void SurfboardMainUnit::loopFileUpload(SystemStatus status) {
                     syncManager->sendWifiStopFileUploadCommand(it->first);
                     StatusUpdateMessage statusMessage;
                     memcpy(statusMessage.from, it->second.mac, 6);
-                    statusMessage.status = SamplingUnitStatusMessage::STAND_BY;
+                    statusMessage.status = SamplerStatus::UNIT_STAND_BY;
                     syncManager->addStatusUpdateMessage(statusMessage);
                 }catch(...){
                     StatusUpdateMessage statusMessage;
                     memcpy(statusMessage.from, it->second.mac, 6);
-                    statusMessage.status = SamplingUnitStatusMessage::ERROR;
+                    statusMessage.status = SamplerStatus::UNIT_ERROR;
                     syncManager->addStatusUpdateMessage(statusMessage);
                 }
               } else if(currentConnectionMode == WirelessHandler::MODE::ESP_NOW){
