@@ -22,9 +22,9 @@ class WirelessHandler{
             OFF
         };
 
-    WirelessHandler(Logger* logger, const String& _wifiSSID, const String& _wifiPassword, int _esp_now_channel, std::vector<uint8_t*> _esp_now_peers, ESPNowRecvCallback _esp_rec_ballback);
+    WirelessHandler(Logger* logger, int _esp_now_channel, std::vector<uint8_t*> _esp_now_peers, ESPNowRecvCallback _esp_rec_ballback);
     MODE getCurrentMode();
-    void switchToWifi();
+    void switchToWifi(const String& _wifiSSID, const String& _wifiPassword);
     void switchToESPNow();
     bool isConnected();
     String getIP();

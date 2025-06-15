@@ -1,9 +1,9 @@
 #include "WirelessHandler.h"
 
-WirelessHandler::WirelessHandler(Logger* logger, const String& _wifiSSID, const String& _wifiPassword, int _esp_now_channel, std::vector<uint8_t*> _esp_now_peers, ESPNowRecvCallback _esp_rec_ballback){
+WirelessHandler::WirelessHandler(Logger* logger, int _esp_now_channel, std::vector<uint8_t*> _esp_now_peers, ESPNowRecvCallback _esp_rec_ballback){
     this->logger = logger;
-    this->wifi_ssid = _wifiSSID;
-    this->wifi_password = _wifiPassword;
+    this->wifi_ssid = "";
+    this->wifi_password = "";
     this->esp_now_channel = _esp_now_channel;
     for (int i = 0; i < _esp_now_peers.size(); i++) {
         esp_now_peer_info_t* peerInfo = new esp_now_peer_info_t();
@@ -25,8 +25,10 @@ WirelessHandler::MODE WirelessHandler::getCurrentMode(){
     return mode;
 }
 
-void WirelessHandler::switchToWifi(){
+void WirelessHandler::switchToWifi(const String& _wifiSSID, const String& _wifiPassword){
     if(this->currentMode != WirelessHandler::MODE::WIFI){
+        this->wifi_ssid = _wifiSSID;
+        this->wifi_password = _wifiPassword;
         logger->info("Switching to WiFi connection...");
         currentModeStartTime = millis();
         this->currentMode = WirelessHandler::MODE::WIFI;
