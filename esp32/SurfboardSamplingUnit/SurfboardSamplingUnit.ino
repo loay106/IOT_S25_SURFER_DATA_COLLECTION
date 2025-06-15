@@ -2,6 +2,8 @@
 
 // ******************************* GLOBAL VARIABLES *************************************
 SurfboardSamplingUnit* samplingUnit; 
+Logger* logger;
+SDCardHandler* sdCardHandler;
 // ******************************* END OF GLOBAL VARIABLES ******************************
 
 // ******************************* UNIT CONFIG - EDIT HERE ******************************
@@ -39,7 +41,7 @@ void setup() {
     logger = Logger::getInstance();
     logger->init(serialBaudRate);
     logger->setLogLevel(LogLevel::DEBUG);
-    delay(200);
+    delay(1000);
 
     logger->info("Sampling unit init starting...");
 
@@ -60,12 +62,14 @@ void setup() {
         while(true){delay(500);};
     }
 
-    Sampler* sampler = new Sampler(logger, sdCardHandler, cloudSyncManager);
+    Sampler* sampler = new Sampler(logger, sdCardHandler);
     vector<uint8_t*> mainUnitsMacAddress;
     mainUnitsMacAddress.push_back(CONTROL_UNIT_MAC);
     WirelessHandler* wirelessHandler = new WirelessHandler(logger, ESP_NOW_CHANNEL, mainUnitsMacAddress, SamplingUnitSyncManager::onDataReceivedCallback);
     SamplingUnitSyncManager* syncManager = SamplingUnitSyncManager::getInstance();
-    samplingUnit = new SurfboardSamplingUnit(wirelessHandler, syncManager,sdCardHandler,sampler, logger);
+    String ownMacAddress = wirelessHandler->getMacAddress();
+    DataCollectorServer* server = new DataCollectorServer(sdCardHandler, ownMacAddress, false);
+    samplingUnit = new SurfboardSamplingUnit(wirelessHandler, syncManager,sdCardHandler,sampler, logger, server);
 
     try{
         // don't change the order of the init
@@ -79,6 +83,13 @@ void setup() {
             delay(100);
         }
     }    
+
+    if(wirelessHandler->getCurrentMode() == WirelessHandler::MODE::OFF){
+      wirelessHandler->switchToESPNow();
+      while(!wirelessHandler->isConnected()){
+          wirelessHandler->loop();
+      }
+    }
     logger->info("Unit setup complete!");
 }
 
@@ -88,40 +99,17 @@ void loop() {
     SamplerStatus status = samplingUnit->getStatus();
     switch(status){
         case UNIT_STAND_BY:
-            delay(5);
-            break;
-        case UNIT_ERROR:
-            delay(5);
+            samplingUnit->loopStandBy();
             break;
         case UNIT_SAMPLING:
             samplingUnit->loopSampling();
-            delay(5);
             break;
         case UNIT_SAMPLE_FILES_UPLOAD:
             samplingUnit->loopFileUpload();
+            break;
+        case UNIT_ERROR:
             delay(10);
             break;
     }
-
-    switch (status){
-        case UNIT_STAND_BY:
-            samplingUnit->reportStatus(SamplingUnitStatusMessage::STAND_BY);
-            break;
-
-        case UNIT_SAMPLING:
-            samplingUnit->reportStatus(SamplingUnitStatusMessage::SAMPLING);
-            break;
-
-        case UNIT_ERROR:
-            samplingUnit->reportStatus(SamplingUnitStatusMessage::ERROR);
-            break;
-
-        case UNIT_SAMPLE_FILES_UPLOAD: 
-            samplingUnit->reportStatus(SamplingUnitStatusMessage::SAMPLE_FILES_UPLOAD);
-            break;
-        
-        default:
-            break;
-    }
-
+    samplingUnit->reportStatus(false);
 }

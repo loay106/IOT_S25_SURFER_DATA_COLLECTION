@@ -14,7 +14,7 @@ void SamplingUnitSyncManager::onDataReceivedCallback(const uint8_t *mac_addr, co
     }
 }
 
-void SamplingUnitSyncManager::reportStatus(SamplingUnitStatusMessage status){
+void SamplingUnitSyncManager::reportStatus(SamplerStatus status){
     String message = serializeStatusUpdateMsg(status);
     esp_err_t result = esp_now_send(controlUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {

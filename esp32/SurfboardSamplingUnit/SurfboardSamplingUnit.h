@@ -6,6 +6,8 @@
 #include <IOT_TECHNION_SURFBOARD.h>
 #include "SamplingUnitSyncManager.h"
 
+extern const unsigned long MAX_WIFI_CONNECT_TRY_MILLIS;
+
 class SurfboardSamplingUnit {
     private:
         Sampler* sampler;
@@ -13,16 +15,23 @@ class SurfboardSamplingUnit {
         Logger* logger;
         SDCardHandler* sdCardHandler;
         WirelessHandler* wirelessHandler;
+        DataCollectorServer* server;
         SamplerStatus status;
+        unsigned long currentSamplingSession;
+        String WIFI_SSID;
+        String WIFI_PASSWORD;
         int lastStatusReportTime;
+        unsigned long wifi_connection_start_time;
     public:
-        SurfboardSamplingUnit(WirelessHandler* wirelessHandler, SamplingUnitSyncManager* syncManager, SDCardHandler* sdCardHandler, Sampler* sampler, Logger* logger);
+        SurfboardSamplingUnit(WirelessHandler* wirelessHandler, SamplingUnitSyncManager* syncManager, SDCardHandler* sdCardHandler, Sampler* sampler, Logger* logger, DataCollectorServer* _server);
         void addSensor(SensorBase* sensor);
-        SamplerStatus getStatus();
         void handleNextCommand();
+        SamplerStatus getStatus();
+
         void loopSampling();
         void loopFileUpload();
-        void reportStatus(SamplingUnitStatusMessage status_message , bool force=false);
+        void loopStandBy();
+        void reportStatus(bool force=false);
         void loopComponents();
 };
 #endif // SURFBOARD_SAMPLING_UNIT_H

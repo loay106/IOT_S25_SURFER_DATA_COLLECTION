@@ -39,6 +39,7 @@ void DataCollectorServer::begin()
 
 bool DataCollectorServer::isStopRequestReceived(){
     bool flag = stopFlag;
+    stopFlag = false;
     return flag;
 }
 
@@ -49,6 +50,10 @@ void DataCollectorServer::stop(){
     serverStarted = false;
     stopFlag = false;
     Logger::getInstance()->info(F("Uploader server stopped."));
+}
+
+bool DataCollectorServer::isServerRunning(){
+    return serverStarted;
 }
 
 void DataCollectorServer::expose_list_samplings_endpoint(){

@@ -36,6 +36,7 @@ class DataCollectorServer {
     void begin();
     bool isStopRequestReceived();
     void stop();
+    bool isServerRunning();
 };
 
 #endif /* DATA_COLLECTOR_SERVER_H */

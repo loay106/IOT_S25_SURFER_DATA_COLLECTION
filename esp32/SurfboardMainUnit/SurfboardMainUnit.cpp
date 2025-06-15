@@ -361,6 +361,10 @@ void SurfboardMainUnit::loopSampling() {
     sampler->writeSensorsData();
   }
 
+  // todo: handle case where esp is now on wifi mode
+  // should send to esp units to stop, then send them  to start sampling
+  // or just make sure we never get here in wifi mode...
+
   std::map<String, SamplingUnitRep>::iterator it;
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
     SamplerStatus unitStatus = it->second.status;

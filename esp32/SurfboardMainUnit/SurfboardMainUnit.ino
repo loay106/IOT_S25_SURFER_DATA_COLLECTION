@@ -48,7 +48,7 @@ void setup() {
     logger = Logger::getInstance();
     logger->init(serialBaudRate);
     logger->setLogLevel(LogLevel::DEBUG);
-    delay(200);
+    delay(1000);
 
     logger->info("System init starting...");
 

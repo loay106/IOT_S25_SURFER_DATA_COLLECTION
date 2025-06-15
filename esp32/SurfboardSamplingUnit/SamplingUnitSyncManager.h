@@ -31,7 +31,7 @@ class SamplingUnitSyncManager {
             return instance;
         }
 
-        void reportStatus(SamplingUnitStatusMessage status);
+        void reportStatus(SamplerStatus status);
         static void setNextCommand(CommandMessage cmd);
         static void onDataReceivedCallback(const uint8_t *mac_addr, const uint8_t* incomingData, int len);
         CommandMessage getNextCommand();
