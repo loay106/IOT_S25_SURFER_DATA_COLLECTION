@@ -37,11 +37,14 @@ def scan_devices_flow():
                 device = ESP32Device(hostname, ip, is_main, mac_address)
                 while True:
                     try:
-                        files = list_available_sampling_files(hostname)
+                        files = list_available_sampling_files(hostname, ip)
                         for file in files:
                             timestamp = extract_timestamp(file)
                             AVAILABLE_SAMPLINGS.add(timestamp)
-                            device.available_samplings[timestamp] = set(files)
+                            if timestamp not in device.available_samplings:
+                                device.available_samplings[timestamp] = set()
+
+                            device.available_samplings[timestamp].add(file)
                             FOUND_DEVICES[hostname] = device
                         break
                     except Exception as e:
@@ -56,7 +59,7 @@ def download_by_timestamp(timestamp, validate_download):
     def download_for_device(dev):
         files = dev.available_samplings.get(timestamp, set())
         for file in files:
-            download_file(dev.hostname, file, validate_download)
+            download_file(dev.hostname, dev.ip, file, validate_download)
 
     tasks = []
 
@@ -84,7 +87,7 @@ def delete_samplings_flow():
     try:
         for _, device in FOUND_DEVICES.items():
             while True:
-                is_deleted = remove_all_samplings(device.hostname)
+                is_deleted = remove_all_samplings(device.hostname, device.ip)
                 if is_deleted:
                     device.available_samplings.clear()
                     break

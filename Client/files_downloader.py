@@ -2,6 +2,7 @@ import os
 import time
 import hashlib
 import requests
+import urllib.parse
 
 __all__ = [
     'SAMPLINGS_DOWNLOAD_DIRECTORY',
@@ -19,14 +20,14 @@ REMOVE_ALL_SAMPLINGS = "/samplings/delete"
 SAMPLINGS_DOWNLOAD_DIRECTORY = './tmp/samplings'
 
 
-def list_available_sampling_files(hostname) -> list:
-    url = f"http://{hostname}.local:{PORT}{LIST_SAMPLINGS_ENDPOINT}"
+def list_available_sampling_files(hostname, ip) -> list:
+    url = f"http://{ip}:{PORT}{LIST_SAMPLINGS_ENDPOINT}"
     response = requests.get(url)
     # print(f"[DEBUG] Raw response from {ip}:", response.text)
     return response.json().get("files")
 
 
-def download_file(hostname, filename, validate_download: bool):
+def download_file(hostname, ip, filename, validate_download: bool):
     filename_only = os.path.basename(filename)
     device_dir = os.path.join(SAMPLINGS_DOWNLOAD_DIRECTORY, hostname)
     os.makedirs(device_dir, exist_ok=True)
@@ -43,7 +44,8 @@ def download_file(hostname, filename, validate_download: bool):
 
     while True:
         try:
-            url = f"http://{hostname}.local:{PORT}{DOWNLOAD_ENDPOINT}{filename}"
+            encoded_filename = urllib.parse.quote(filename)
+            url = f"http://{ip}:{PORT}{DOWNLOAD_ENDPOINT}{encoded_filename}"
             response = requests.get(url)
 
             if response.ok:
@@ -55,7 +57,7 @@ def download_file(hostname, filename, validate_download: bool):
                     # Calculate MD5 locally
                     local_md5 = _calculate_md5(tmp_path)
                     if local_md5:
-                        _validate_file_on_device(hostname, filename, local_md5)
+                        _validate_file_on_device(hostname, ip, filename, local_md5)
                     else:
                         print(f"[!] Failed to calculate MD5 for {filename_only}")
                     os.rename(tmp_path, final_path)
@@ -72,9 +74,9 @@ def download_file(hostname, filename, validate_download: bool):
         time.sleep(2)  # Avoid spamming the device/network
 
 
-def remove_all_samplings(hostname):
+def remove_all_samplings(hostname, ip):
     try:
-        url = f"http://{hostname}.local:{PORT}{REMOVE_ALL_SAMPLINGS}"
+        url = f"http://{ip}:{PORT}{REMOVE_ALL_SAMPLINGS}"
         response = requests.post(url)
         if response.ok:
             print(f"All samplings removed from {hostname}")
@@ -100,8 +102,8 @@ def _calculate_md5(file_path):
         return None
 
 
-def _validate_file_on_device(hostname, filename, expected_md5):
-    url = f"http://{hostname}.local:{PORT}{VALIDATE_ENDPOINT}"
+def _validate_file_on_device(hostname, ip, filename, expected_md5):
+    url = f"http://{ip}:{PORT}{VALIDATE_ENDPOINT}"
     params = {
         "file": filename,
         "md5": expected_md5
