@@ -16,6 +16,7 @@ String SensorBase::getModel(){
 
 void SensorBase::startSampling(const String& outputFilePath){
     samplingFileName = String(outputFilePath);
+    sdcardHandler->createFile(samplingFileName);
     sampleBuffer = "";
     samplesCount=0;
     samplingStartMillis=millis();

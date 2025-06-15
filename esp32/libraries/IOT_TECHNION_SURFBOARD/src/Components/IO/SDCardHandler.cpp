@@ -54,7 +54,12 @@ void SDCardHandler::writeData(const String& filePath, const char *data){
     File file = SD.open(filePath, FILE_APPEND);
     if (!file) {
         logger->error(String("Failed to open file: ") + filePath);
-        throw SDCardError();
+        logger->error(String("Trying to create file so system will recover..."));
+        createFile(filePath);
+        file = SD.open(filePath, FILE_APPEND);
+        if (!file) {
+            throw SDCardError();
+        }
     }
     file.println(data);
     file.flush();
