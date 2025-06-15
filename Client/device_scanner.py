@@ -34,7 +34,7 @@ def scan_for_mdns_services() -> dict:
     listener = ESP32Listener()
     print("[*] Scanning for devices via mDNS...")
     browser = ServiceBrowser(zeroconf, SERVICE_TYPE, listener)
-    time.sleep(10)
+    time.sleep(5)
     zeroconf.close()
     discovered_devices = listener.discovered_devices.copy()
     return discovered_devices
