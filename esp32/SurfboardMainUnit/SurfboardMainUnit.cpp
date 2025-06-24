@@ -14,6 +14,7 @@ SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTim
   status = SystemStatus::SYSTEM_STARTING;
   this->WIFI_SSID = _wifiSSID;
   this->WIFI_PASSWORD = _wifiPassword;
+  this->lastModeChange = 0;
   currentSamplingSession = 0;
 }
 
@@ -179,18 +180,29 @@ SystemStatus SurfboardMainUnit::getStatus() {
 void SurfboardMainUnit::handleButtonPress() {
   ButtonPressType press = buttonHandler->getLastPressType();
   if (press != ButtonPressType::NO_PRESS) {
+    unsigned long current = millis();
     switch (status) {
       case SystemStatus::SYSTEM_SAMPLING:
       case SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR:
         logger->debug(F("Soft or long press detected while sampling"));
-        stopSampling();
+        if((current - lastModeChange) < MODE_MINIMUM_TIME_MILLIS){
+            stopSampling();
+            lastModeChange = current;
+        }else{
+            logger->debug(F("Soft or long press was ignored because sampling session hasn't exceeded the minimum"));
+        }
         break;
 
       case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
       case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
       case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR:
         logger->debug(F("Soft or long press detected while file uploading"));
-        stopSampleFilesUpload();
+        if((current - lastModeChange) < MODE_MINIMUM_TIME_MILLIS){
+            stopSampleFilesUpload();
+            lastModeChange = current;
+        }else{
+            logger->debug(F("Soft or long press was ignored because sampling session hasn't exceeded the minimum"));
+        }
         break;
 
       case SystemStatus::SYSTEM_STAND_BY:

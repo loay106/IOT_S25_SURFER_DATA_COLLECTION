@@ -14,10 +14,8 @@ class SamplingUnitSyncManager {
     // todo: change class to singleton
     private:
         static CommandMessage* nextCommand;
-        esp_now_peer_info_t* controlUnitPeer;
         uint8_t controlUnitMac[6];
         static Logger* logger;
-
         static SamplingUnitSyncManager* instance;
 
         SamplingUnitSyncManager(){};
@@ -30,6 +28,8 @@ class SamplingUnitSyncManager {
             }
             return instance;
         }
+
+        void init(uint8_t _controlUnitMac[6]);
 
         void reportStatus(SamplerStatus status);
         static void setNextCommand(CommandMessage cmd);

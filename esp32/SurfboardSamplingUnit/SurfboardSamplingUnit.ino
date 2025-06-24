@@ -17,14 +17,21 @@ void addSensors(vector<String> sensorsParams){
     Mock_HX711* mock_force_0 = new Mock_HX711(logger,sdCardHandler, 1000);
     Mock_HX711* mock_force_1 = new Mock_HX711(logger,sdCardHandler, 1000);
     Mock_HX711* mock_force_2 = new Mock_HX711(logger,sdCardHandler, 1000);
+    IMU_BNO080* imu_sensor = new IMU_BNO080(logger, sdCardHandler, 1000);
+    Force_HX711* force_sensor = new Force_HX711(logger, sdCardHandler, 100, 12, 13);
 
     mock_force_0->init();
     mock_force_1->init();
     mock_force_2->init();
+    imu_sensor->init();
+    force_sensor->init();
 
     samplingUnit->addSensor(mock_force_0);
     samplingUnit->addSensor(mock_force_1);
     samplingUnit->addSensor(mock_force_2);
+    samplingUnit->addSensor(imu_sensor);
+    samplingUnit->addSensor(force_sensor);
+    
 }
 // ******************************* END OF UNIT CONFIG ***********************************
 
@@ -76,6 +83,7 @@ void setup() {
         logger->init(serialBaudRate);
         addSensors(sensorsParams);
         sampler->init();
+        syncManager->init(CONTROL_UNIT_MAC);
     }catch(InitError& err){
         while(true){
             // don't proceed, there's a wiring error!
@@ -100,9 +108,11 @@ void loop() {
     switch(status){
         case UNIT_STAND_BY:
             samplingUnit->loopStandBy();
+            samplingUnit->reportStatus(false);
             break;
         case UNIT_SAMPLING:
             samplingUnit->loopSampling();
+            samplingUnit->reportStatus(false);
             break;
         case UNIT_SAMPLE_FILES_UPLOAD:
             samplingUnit->loopFileUpload();
@@ -111,5 +121,4 @@ void loop() {
             delay(10);
             break;
     }
-    samplingUnit->reportStatus(false);
 }

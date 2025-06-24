@@ -14,11 +14,15 @@ void SamplingUnitSyncManager::onDataReceivedCallback(const uint8_t *mac_addr, co
     }
 }
 
+void SamplingUnitSyncManager::init(uint8_t _controlUnitMac[6]){
+    memcpy(this->controlUnitMac, _controlUnitMac, 6);
+}
+
 void SamplingUnitSyncManager::reportStatus(SamplerStatus status){
     String message = serializeStatusUpdateMsg(status);
     esp_err_t result = esp_now_send(controlUnitMac, (uint8_t *) message.c_str(), message.length());
     if (result != ESP_OK) {
-        SamplingUnitSyncManager::logger->error(F("Failed to report status!"));
+        SamplingUnitSyncManager::logger->error("Failed to report status! Error: " + String(esp_err_to_name(result)));
     }
 }
 

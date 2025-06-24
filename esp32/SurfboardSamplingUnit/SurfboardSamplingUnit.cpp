@@ -22,11 +22,15 @@ void SurfboardSamplingUnit::addSensor(SensorBase *sensor){
 void SurfboardSamplingUnit::handleNextCommand(){
     try{
         CommandMessage command = syncManager->getNextCommand();
+        logger->info("Received new command: " + command_to_string(command.command) + String(" with ") + String(command.params.size()) + " params");
+        logger->info("Current status: " + sampler_status_to_string(this->status));
         switch(command.command){
             case ControlUnitCommand::START_SAMPLING:
                 try{
-                    currentSamplingSession = strtoul(command.params["TIMESTAMP"].c_str(), nullptr, 10);
-                    status == SamplerStatus::UNIT_SAMPLING;
+                    this->currentSamplingSession = strtoul(command.params["TIMESTAMP"].c_str(), nullptr, 10);
+                    this->status = SamplerStatus::UNIT_SAMPLING;
+                    logger->info("Unit status changed to " + sampler_status_to_string(this->status));
+                    logger->info("Current sampling session " + String(this->currentSamplingSession));
                     reportStatus(true);
                 }catch(const exception& ex){
                     logger->error("Invalid command params");
@@ -37,7 +41,8 @@ void SurfboardSamplingUnit::handleNextCommand(){
             case ControlUnitCommand::STOP_SAMPLING:
             case ControlUnitCommand::STOP_SAMPLE_FILES_UPLOAD:
                 try{
-                    status == SamplerStatus::UNIT_STAND_BY;
+                    this->status = SamplerStatus::UNIT_STAND_BY;
+                    logger->info("Unit status changed to " + sampler_status_to_string(this->status));
                     reportStatus(true);
                 }catch(const exception& ex){
                     logger->error("Invalid command params");
@@ -49,7 +54,8 @@ void SurfboardSamplingUnit::handleNextCommand(){
                 try{
                     WIFI_SSID = command.params["WIFI_SSID"];
                     WIFI_PASSWORD = command.params["WIFI_PASSWORD"];
-                    status == SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
+                    this->status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
+                    logger->info("Unit status changed to " + sampler_status_to_string(this->status));
                     reportStatus(true);
                 }catch(const exception& ex){
                     logger->error("Invalid command params");
@@ -66,16 +72,18 @@ void SurfboardSamplingUnit::handleNextCommand(){
 
 void SurfboardSamplingUnit::loopSampling(){
     if (!sampler->isSampling()) {
-      sampler->startSampling(currentSamplingSession);
+      sampler->startSampling(this->currentSamplingSession);
     } else {
       sampler->writeSensorsData();
     }
+    
     if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::ESP_NOW){
       wirelessHandler->switchToESPNow();
     }
-    if(!server->isServerRunning()){
+    if(server->isServerRunning()){
       server->stop();
     }
+    
 }
 
 void SurfboardSamplingUnit::loopStandBy(){
@@ -125,10 +133,10 @@ SamplerStatus SurfboardSamplingUnit::getStatus(){
     return current;
 }
 
-void SurfboardSamplingUnit::reportStatus(bool force ){
+void SurfboardSamplingUnit::reportStatus(bool force){
     unsigned long currentTime = millis(); 
     if ((currentTime - lastStatusReportTime >= STATUS_REPORT_DELAY_MILLIS) || force) {
-        syncManager->reportStatus(status);
+        syncManager->reportStatus(this->status);
         lastStatusReportTime = currentTime;     
     }
 }

@@ -14,6 +14,7 @@ const int MAX_STATUS_UPDATE_DELAY = 3000;
 const int FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS = 5000;
 const int WIFI_CONNECTION_RETRY_TIMEOUT_MILLIS = 6000;
 const int FILE_UPLOAD_STOP_CONNECTION_SWITCH_INTERVAL = 5000;
+const int MODE_MINIMUM_TIME_MILLIS = 3000;
 
 typedef struct SamplingUnitRep{
     uint8_t mac[6];
@@ -35,6 +36,7 @@ class SurfboardMainUnit {
         Sampler* sampler; // internal sampler
         SDCardHandler* sdCardHandler;
         unsigned long currentSamplingSession;
+        unsigned long lastModeChange;
         SystemStatus status;
         WirelessHandler* wirelessHandler;
         String WIFI_SSID;

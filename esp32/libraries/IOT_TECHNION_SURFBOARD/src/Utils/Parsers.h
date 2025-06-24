@@ -56,6 +56,19 @@ inline String sampler_status_to_string(SamplerStatus status){
     }
 }
 
+inline String command_to_string(ControlUnitCommand command){
+    switch(command){
+        case ControlUnitCommand::START_SAMPLING:
+          return "START_SAMPLING";
+        case ControlUnitCommand::STOP_SAMPLING:
+          return "STOP_SAMPLING";
+        case ControlUnitCommand::START_SAMPLE_FILES_UPLOAD:
+          return "START_SAMPLE_FILES_UPLOAD";
+        case ControlUnitCommand::STOP_SAMPLE_FILES_UPLOAD:
+          return "STOP_SAMPLE_FILES_UPLOAD";
+    }
+}
+
 
 
 #endif /* PARSERS_H */
