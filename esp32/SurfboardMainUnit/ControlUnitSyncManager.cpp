@@ -23,34 +23,36 @@ void ControlUnitSyncManager::broadcastESPNowCommand(const ControlUnitCommand& co
     } 
 }
 
-void ControlUnitSyncManager::sendWifiStopFileUploadCommand(const String& unitIP){
-  String url = "http://" + unitIP + ".local/stop";
-  httpClient.begin(url);
-  httpClient.setTimeout(10);
-  logger->info("Sending stop upload to host " + unitIP);
-  int httpCode = httpClient.POST("");
-  httpClient.end();
-  if (httpCode == 204) {
-    logger->info(unitIP + " received command correctly!");
-  }else{
-    throw WifiError();
-  }
+void ControlUnitSyncManager::sendWifiStopFileUploadCommand(const String& unitIP) {
+    String url = "http://" + unitIP + "/stop";
+    
+    logger->debug("Sending stop request to " + unitIP);
+    httpClient.begin(url);
+    httpClient.setTimeout(500);
+    int httpCode = httpClient.POST("");
+    httpClient.end();
+
+    if (httpCode == 204) {
+        logger->debug(unitIP + " responded to stop successfully.");
+    } else {
+        logger->debug("Stop failed. HTTP code: " + String(httpCode));
+        throw WifiError();
+    }
 }
 
 void ControlUnitSyncManager::pingServerWifi(const String& unitIP) {
-    //String url = "http://" + ip.toString() + "/ping";
     String url = "http://" + unitIP + "/ping";
     
-    logger->info("Sending ping request to " + unitIP);
+    logger->debug("Sending ping request to " + unitIP);
     httpClient.begin(url);
     httpClient.setTimeout(500);
     int httpCode = httpClient.GET();
     httpClient.end();
 
     if (httpCode == 204) {
-        logger->info(unitIP + " responded to ping successfully.");
+        logger->debug(unitIP + " responded to ping successfully.");
     } else {
-        logger->error("Ping failed. HTTP code: " + String(httpCode));
+        logger->debug("Ping failed. HTTP code: " + String(httpCode));
         throw WifiError();
     }
 }

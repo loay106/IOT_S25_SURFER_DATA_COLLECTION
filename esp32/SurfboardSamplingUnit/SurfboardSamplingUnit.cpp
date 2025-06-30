@@ -122,6 +122,7 @@ void SurfboardSamplingUnit::loopFileUpload(){
 
     if(server->isStopRequestReceived()){
       server->stop();
+      logger->info("Stopping file upload process, changing unit to stand by mode");
       status = SamplerStatus::UNIT_STAND_BY;
     }
 }
@@ -134,6 +135,9 @@ SamplerStatus SurfboardSamplingUnit::getStatus(){
 }
 
 void SurfboardSamplingUnit::reportStatus(bool force){
+    if(wirelessHandler->getCurrentMode() != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
+      return;
+    }
     unsigned long currentTime = millis(); 
     if ((currentTime - lastStatusReportTime >= STATUS_REPORT_DELAY_MILLIS) || force) {
         syncManager->reportStatus(this->status);

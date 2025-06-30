@@ -38,7 +38,7 @@ void SurfboardMainUnit::updateStatus(SystemStatus newStatus) {
   if (status == newStatus) {
     return;
   }
-  logger->info("Updating system status from " + system_status_to_string(status) + " to " + system_status_to_string(newStatus));
+  logger->debug("Updating system status from " + system_status_to_string(status) + " to " + system_status_to_string(newStatus));
   status = newStatus;
   switch (status) {
     case SystemStatus::SYSTEM_STARTING:
@@ -235,7 +235,7 @@ void SurfboardMainUnit::readStatusUpdateMessages() {
       SamplingUnitRep& samplingUnit = samplingUnits.at(unitID);
       samplingUnit.lastStatusUpdateMillis = millis();
       samplingUnit.status = statusMessage.status;
-      logger->info("Unit " + unitID + " reported " + sampler_status_to_string(statusMessage.status));
+      logger->debug("Unit " + unitID + " reported " + sampler_status_to_string(statusMessage.status));
     } catch (const std::out_of_range& ex) {
       logger->error("Status update message received from unknown unit " + unitID);
     }
@@ -297,7 +297,7 @@ void SurfboardMainUnit::loopFileUploadStopping() {
       if(it->second.status != SamplerStatus::UNIT_STAND_BY){
           if(currentConnectionMode == WirelessHandler::MODE::WIFI){
             try{
-                syncManager->sendWifiStopFileUploadCommand(it->first);
+                syncManager->sendWifiStopFileUploadCommand(it->second.dataCollectorServerIP);
                 StatusUpdateMessage statusMessage;
                 memcpy(statusMessage.from, it->second.mac, 6);
                 statusMessage.status = SamplerStatus::UNIT_STAND_BY;
@@ -312,6 +312,7 @@ void SurfboardMainUnit::loopFileUploadStopping() {
   }
 
   if((current - this->fileUploadStopStartTime) >= FILE_UPLOAD_STOP_TIME_MAX_THRESHOLD || numUnitsInStandBy == samplingUnits.size()){
+    logger->info("File upload process stopped!");
     wirelessHandler->switchToESPNow();
     updateStatus(SystemStatus::SYSTEM_STAND_BY);
     std::map<String, SamplingUnitRep>::iterator it;
@@ -334,7 +335,7 @@ void SurfboardMainUnit::loopFileUpload() {
         return;
     }else{
       // wifi is available and connected
-      int numUnitsInFileUploadMode = 0;
+      int numUnitsNotInFileUploadMode = 0;
       std::map<String, SamplingUnitRep>::iterator it;
       for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
           try{
@@ -343,13 +344,12 @@ void SurfboardMainUnit::loopFileUpload() {
               }else{
                 // ping each unit to make sure its connected to wifi (serves as a reverse status report)
                 if ((current - it->second.lastStatusUpdateMillis) >= STATUS_REPORT_DELAY_MILLIS) {
-                    logger->info("Pinging unit " + it->first);
+                    logger->debug("Pinging unit " + it->first);
                     syncManager->pingServerWifi(it->second.dataCollectorServerIP);
                     StatusUpdateMessage statusMessage;
                     memcpy(statusMessage.from, it->second.mac, 6);
                     statusMessage.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
                     syncManager->addStatusUpdateMessage(statusMessage);
-                    numUnitsInFileUploadMode++;
                 }
               }
           }catch(ConnectionTimeoutError& err){
@@ -363,9 +363,13 @@ void SurfboardMainUnit::loopFileUpload() {
               statusMessage.status = SamplerStatus::UNIT_ERROR;
               syncManager->addStatusUpdateMessage(statusMessage);
           }
+          if(it->second.status != SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD){
+              numUnitsNotInFileUploadMode++;
+          }
       }
 
-      if(numUnitsInFileUploadMode != samplingUnits.size() && (current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
+      if(numUnitsNotInFileUploadMode != 0 && (current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
+          logger->info(String(numUnitsNotInFileUploadMode) + " units out of " + String(samplingUnits.size()) + " are not in file upload mode, switching to esp-now...");
           wirelessHandler->switchToESPNow();
       }
     }
