@@ -184,6 +184,7 @@ void DataCollectorServer::expose_remove_all_samplings_endpoint(){
 
 void DataCollectorServer::expose_ping_endpoint() {
   server.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request){
+      Logger::getInstance()->debug(F("Received request to /ping endpoint"));
       request->send(204); // No Content
   });
 }
@@ -191,6 +192,7 @@ void DataCollectorServer::expose_ping_endpoint() {
 void DataCollectorServer::expose_server_stop_endpoint(){
   server.on("/stop", HTTP_POST, [](AsyncWebServerRequest *request){
     DataCollectorServer::stopFlag = true;
+    Logger::getInstance()->info(F("Received request to /stop endpoint"));
     request->send(204); // No Content
   });
 }

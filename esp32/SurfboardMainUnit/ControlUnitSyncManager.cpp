@@ -23,36 +23,45 @@ void ControlUnitSyncManager::broadcastESPNowCommand(const ControlUnitCommand& co
     } 
 }
 
-void ControlUnitSyncManager::sendWifiStopFileUploadCommand(const String& unitMac){
-  String hostname = getHostname(unitMac, false);
-  String url = "http://" + hostname + ".local/stop";
-  HTTPClient http;
-  http.begin(url);
-  http.setTimeout(10);
-  logger->info("Sending stop upload to host " + hostname);
-  int httpCode = http.POST("");
-  http.end();
+void ControlUnitSyncManager::sendWifiStopFileUploadCommand(const String& unitIP){
+  String url = "http://" + unitIP + ".local/stop";
+  httpClient.begin(url);
+  httpClient.setTimeout(10);
+  logger->info("Sending stop upload to host " + unitIP);
+  int httpCode = httpClient.POST("");
+  httpClient.end();
   if (httpCode == 204) {
-    logger->info(hostname + " received command correctly!");
+    logger->info(unitIP + " received command correctly!");
   }else{
     throw WifiError();
   }
 }
 
-void ControlUnitSyncManager::pingServerWifi(const String& unitMac){
-  String hostname = getHostname(unitMac, false);
-  String url = "http://" + hostname + ".local/ping";
-  HTTPClient http;
-  http.begin(url);
-  http.setTimeout(10);
-  logger->info("Sending stop upload to host " + hostname);
-  int httpCode = http.GET();
-  http.end();
-  if (httpCode == 204) {
-    logger->info(hostname + " received command correctly!");
-  }else{
-    throw WifiError();
+void ControlUnitSyncManager::pingServerWifi(const String& unitIP) {
+    //String url = "http://" + ip.toString() + "/ping";
+    String url = "http://" + unitIP + "/ping";
+    
+    logger->info("Sending ping request to " + unitIP);
+    httpClient.begin(url);
+    httpClient.setTimeout(500);
+    int httpCode = httpClient.GET();
+    httpClient.end();
+
+    if (httpCode == 204) {
+        logger->info(unitIP + " responded to ping successfully.");
+    } else {
+        logger->error("Ping failed. HTTP code: " + String(httpCode));
+        throw WifiError();
+    }
+}
+
+String ControlUnitSyncManager::resolveHostnameToIP(const String& hostname){
+  IPAddress serverIp = MDNS.queryHost(hostname);
+  String serverIPString = serverIp.toString();
+  if(serverIPString == "0.0.0.0"){
+    throw ConnectionTimeoutError();
   }
+  return serverIPString;
 }
 
 bool ControlUnitSyncManager::hasStatusUpdateMessages(){

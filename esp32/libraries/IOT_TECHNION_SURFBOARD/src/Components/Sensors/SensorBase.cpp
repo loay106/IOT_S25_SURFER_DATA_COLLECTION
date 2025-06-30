@@ -61,5 +61,6 @@ void SensorBase::flushSamplesBuffer(bool isLastLine){
         sampleBuffer.remove(sampleBuffer.length() - 1);
     }
     sdcardHandler->writeData(samplingFileName, sampleBuffer.c_str());
+    logger->info("Sensor " + model + " wrote " + String(sampleBuffer.length()) + " bytes of data to SD card");
     sampleBuffer = "";
 }

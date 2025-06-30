@@ -14,8 +14,8 @@ WirelessHandler* wirelessHandler;
 void addSamplingUnits(){
   //  define and add your sampling units here...
   //  samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xCC, 0xDB, 0xA7, 0x5A, 0x7F, 0xC0});
-    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68});
-  //  samplingUnitsMacAddresses.push_back(new uint8_t[6]{0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64});
+  //  samplingUnitsMacAddresses.push_back(new uint8_t[6]{0xA8, 0x42, 0xE3, 0x45, 0x94, 0x68});
+    samplingUnitsMacAddresses.push_back(new uint8_t[6]{0x0C, 0xB8, 0x15, 0x77, 0x84, 0x64});
 }
 
 void addSensors(vector<String> sensorsParams){
@@ -120,7 +120,6 @@ void loop() {
         mainUnit->loopComponents();
         mainUnit->handleButtonPress();
         mainUnit->readStatusUpdateMessages();
-        mainUnit->loopDiscoverDisconnected();
         SystemStatus status = mainUnit->getStatus();
         switch(status){
           case SystemStatus::SYSTEM_STAND_BY:
@@ -134,9 +133,13 @@ void loop() {
             mainUnit->loopSampling();
             break;         
           case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
+            mainUnit->loopFileUpload();
+            break;
           case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
+            mainUnit->loopFileUploadStopping();
+            break;
           case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR:
-            mainUnit->loopFileUpload(status);
+            mainUnit->loopFileUploadWifiError();
             break;
           case SystemStatus::SYSTEM_ERROR: 
             statusLighthandler->updateColors(RGBColors::RED, RGBColors::RED);

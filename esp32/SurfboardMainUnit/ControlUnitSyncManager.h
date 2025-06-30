@@ -10,6 +10,7 @@ using namespace std;
 #include <esp_now.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ESPmDNS.h>
 
 #include <IOT_TECHNION_SURFBOARD.h>
 
@@ -20,6 +21,7 @@ class ControlUnitSyncManager{
         static queue<StatusUpdateMessage> statusUpdateQueue;
         static SemaphoreHandle_t queueMutex;
         static ControlUnitSyncManager* instance;
+        HTTPClient httpClient;
         ControlUnitSyncManager(){}; 
     public:
         ControlUnitSyncManager(const ControlUnitSyncManager& obj) = delete;
@@ -32,8 +34,9 @@ class ControlUnitSyncManager{
         void sendESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params, uint8_t samplingUnitMac[6]);
         void broadcastESPNowCommand(const ControlUnitCommand& command,const std::map<String,String>& params); 
         bool hasStatusUpdateMessages();
-        void sendWifiStopFileUploadCommand(const String& unitMac);
-        void pingServerWifi(const String& unitMac);
+        void sendWifiStopFileUploadCommand(const String& unitIP);
+        void pingServerWifi(const String& unitIP);
+        String resolveHostnameToIP(const String& hostname);
         static void addStatusUpdateMessage(StatusUpdateMessage msg); 
         static StatusUpdateMessage popStatusUpdateMessage(); 
         static void processReceivedESPNowMessages(const uint8_t *mac_addr, const uint8_t *incomingData, int len);

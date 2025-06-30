@@ -56,6 +56,29 @@ inline String sampler_status_to_string(SamplerStatus status){
     }
 }
 
+inline String system_status_to_string(SystemStatus status){
+    switch(status){
+        case SystemStatus::SYSTEM_STARTING:
+          return "SYSTEM_STARTING";
+        case SystemStatus::SYSTEM_STAND_BY:
+          return "SYSTEM_STAND_BY";
+        case SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR:
+          return "SYSTEM_STAND_BY_PARTIAL_ERROR";
+        case SystemStatus::SYSTEM_SAMPLING:
+          return "SYSTEM_SAMPLING";
+        case SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR:
+          return "SYSTEM_SAMPLING_PARTIAL_ERROR";
+        case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD:
+          return "SYSTEM_SAMPLE_FILE_UPLOAD";
+        case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR:
+          return "SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR";
+        case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
+          return "SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING";
+        case SystemStatus::SYSTEM_ERROR:
+          return "SYSTEM_ERROR";
+    }
+}
+
 inline String command_to_string(ControlUnitCommand command){
     switch(command){
         case ControlUnitCommand::START_SAMPLING:

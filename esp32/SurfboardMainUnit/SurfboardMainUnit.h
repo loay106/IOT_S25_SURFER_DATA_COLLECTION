@@ -15,6 +15,7 @@ const int FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS = 5000;
 const int WIFI_CONNECTION_RETRY_TIMEOUT_MILLIS = 6000;
 const int FILE_UPLOAD_STOP_CONNECTION_SWITCH_INTERVAL = 5000;
 const int MODE_MINIMUM_TIME_MILLIS = 3000;
+const int FILE_UPLOAD_STOP_TIME_MAX_THRESHOLD = 120000;
 
 typedef struct SamplingUnitRep{
     uint8_t mac[6];
@@ -23,6 +24,7 @@ typedef struct SamplingUnitRep{
     unsigned long lastCommandSentMillis;
     unsigned long lastStatusUpdateMillis;
     String mDNSHostname;
+    String dataCollectorServerIP;
 } SamplingUnitRep;
 
 class SurfboardMainUnit {
@@ -37,6 +39,7 @@ class SurfboardMainUnit {
         SDCardHandler* sdCardHandler;
         unsigned long currentSamplingSession;
         unsigned long lastModeChange;
+        unsigned long fileUploadStopStartTime;
         SystemStatus status;
         WirelessHandler* wirelessHandler;
         String WIFI_SSID;
@@ -51,6 +54,8 @@ class SurfboardMainUnit {
         void startSampleFilesUpload();
         void stopSampleFilesUpload();
 
+        void discoverDisconnected();
+
         void sendESPNowCommand(SamplingUnitRep& unit, ControlUnitCommand command, std::map<String, String> commandParams);        
     public:
         SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTimeHandler* timeHandler, RGBStatusHandler* statusLighthandler, ButtonHandler* buttonHandler, Logger* logger, Sampler* sampler, SDCardHandler* sdCardHandler,WirelessHandler* wirelessHandler, const String& _wifiSSID, const String& _wifiPassword, DataCollectorServer* server);
@@ -63,9 +68,10 @@ class SurfboardMainUnit {
         void readStatusUpdateMessages();
         
         void loopSampling();
-        void loopFileUpload(SystemStatus status);
+        void loopFileUpload();
+        void loopFileUploadStopping();
+        void loopFileUploadWifiError();
         void loopStandby();
-        void loopDiscoverDisconnected();
 
         void loopComponents();
 

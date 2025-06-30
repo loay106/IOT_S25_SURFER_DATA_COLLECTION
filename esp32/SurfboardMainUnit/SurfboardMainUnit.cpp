@@ -15,6 +15,7 @@ SurfboardMainUnit::SurfboardMainUnit(ControlUnitSyncManager* syncManager, RTCTim
   this->WIFI_SSID = _wifiSSID;
   this->WIFI_PASSWORD = _wifiPassword;
   this->lastModeChange = 0;
+  this->fileUploadStopStartTime = 0;
   currentSamplingSession = 0;
 }
 
@@ -26,7 +27,8 @@ void SurfboardMainUnit::init(vector<uint8_t*> samplingUnitsMacAddresses) {
     samplingUnit.lastCommandSentMillis = 0;
     samplingUnit.lastStatusUpdateMillis = 0;
     String macString = macToString(samplingUnit.mac);
-    samplingUnit.mDNSHostname = getHostname(macString, false) + ".local";
+    samplingUnit.mDNSHostname = getHostname(macString, false);
+    samplingUnit.dataCollectorServerIP = "";
     samplingUnits[macString] = samplingUnit;
   }
   updateStatus(SystemStatus::SYSTEM_STAND_BY);
@@ -36,6 +38,7 @@ void SurfboardMainUnit::updateStatus(SystemStatus newStatus) {
   if (status == newStatus) {
     return;
   }
+  logger->info("Updating system status from " + system_status_to_string(status) + " to " + system_status_to_string(newStatus));
   status = newStatus;
   switch (status) {
     case SystemStatus::SYSTEM_STARTING:
@@ -168,6 +171,7 @@ void SurfboardMainUnit::startSampleFilesUpload() {
 
 void SurfboardMainUnit::stopSampleFilesUpload() {
   updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING);
+  this->fileUploadStopStartTime = millis();
   logger->info(String("Stopping file upload..."));
 }
 
@@ -185,7 +189,7 @@ void SurfboardMainUnit::handleButtonPress() {
       case SystemStatus::SYSTEM_SAMPLING:
       case SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR:
         logger->debug(F("Soft or long press detected while sampling"));
-        if((current - lastModeChange) < MODE_MINIMUM_TIME_MILLIS){
+        if((current - lastModeChange) >= MODE_MINIMUM_TIME_MILLIS){
             stopSampling();
             lastModeChange = current;
         }else{
@@ -197,11 +201,11 @@ void SurfboardMainUnit::handleButtonPress() {
       case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING:
       case SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR:
         logger->debug(F("Soft or long press detected while file uploading"));
-        if((current - lastModeChange) < MODE_MINIMUM_TIME_MILLIS){
+        if((current - lastModeChange) >= MODE_MINIMUM_TIME_MILLIS){
             stopSampleFilesUpload();
             lastModeChange = current;
         }else{
-            logger->debug(F("Soft or long press was ignored because sampling session hasn't exceeded the minimum"));
+            logger->debug(F("Soft or long press was ignored because file upload session hasn't exceeded the minimum"));
         }
         break;
 
@@ -248,7 +252,7 @@ void SurfboardMainUnit::sendESPNowCommand(SamplingUnitRep& unit, ControlUnitComm
   if(wirelessHandler->getCurrentMode() == WirelessHandler::MODE::ESP_NOW && wirelessHandler->isConnected()){
       // send command via esp now
       try{
-          syncManager->sendESPNowCommand(ControlUnitCommand::START_SAMPLING, commandParams, unit.mac);
+          syncManager->sendESPNowCommand(command, commandParams, unit.mac);
           unit.lastCommandSentMillis = millis();
       }catch (ESPNowSyncError& error) {
           unit.status = SamplerStatus::UNIT_ERROR;
@@ -256,114 +260,131 @@ void SurfboardMainUnit::sendESPNowCommand(SamplingUnitRep& unit, ControlUnitComm
   }
 }
 
-void SurfboardMainUnit::loopFileUpload(SystemStatus status) {
+void SurfboardMainUnit::loopFileUploadWifiError() {
+  WirelessHandler::MODE currentConnectionMode = wirelessHandler->getCurrentMode();
+
+  if(currentConnectionMode != WirelessHandler::MODE::WIFI){
+      wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
+      return;
+  }
+  
+  if(wirelessHandler->isConnected()){
+      updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
+      return;
+  }
+}
+
+
+void SurfboardMainUnit::loopFileUploadStopping() {
+  // switch between wifi and esp now for 2 minutes then switch to esp-now and switch status to standby
+  // handle status switch from FILE_UPLOAD to STAND_BY
   unsigned long current = millis();
   WirelessHandler::MODE currentConnectionMode = wirelessHandler->getCurrentMode();
 
-  // handle invalid wifi connection here
-  if(status == SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR){
-    if(currentConnectionMode != WirelessHandler::MODE::WIFI){
-        wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
-    }else if(wirelessHandler->isConnected()){
-        updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD);
+  if((current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_STOP_CONNECTION_SWITCH_INTERVAL){
+      if(currentConnectionMode == WirelessHandler::MODE::WIFI){
+          wirelessHandler->switchToESPNow();
+      }else{
+          wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
+      }
+      return;
+  }
+  
+  std::map<String, SamplingUnitRep>::iterator it;
+  int numUnitsInStandBy = 0;
+  std::map<String, String> commandParams;
+  for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
+      if(it->second.status != SamplerStatus::UNIT_STAND_BY){
+          if(currentConnectionMode == WirelessHandler::MODE::WIFI){
+            try{
+                syncManager->sendWifiStopFileUploadCommand(it->first);
+                StatusUpdateMessage statusMessage;
+                memcpy(statusMessage.from, it->second.mac, 6);
+                statusMessage.status = SamplerStatus::UNIT_STAND_BY;
+                syncManager->addStatusUpdateMessage(statusMessage);
+            }catch(...){}
+          } else if(currentConnectionMode == WirelessHandler::MODE::ESP_NOW){
+              sendESPNowCommand(it->second, ControlUnitCommand::STOP_SAMPLE_FILES_UPLOAD,commandParams);
+          }
+      }else{
+          numUnitsInStandBy++;
+      }
+  }
+
+  if((current - this->fileUploadStopStartTime) >= FILE_UPLOAD_STOP_TIME_MAX_THRESHOLD || numUnitsInStandBy == samplingUnits.size()){
+    wirelessHandler->switchToESPNow();
+    updateStatus(SystemStatus::SYSTEM_STAND_BY);
+    std::map<String, SamplingUnitRep>::iterator it;
+    for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
+      it->second.dataCollectorServerIP = "";
     }
     return;
+  }
+}
 
-  } else if(status == SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD){
-      if(currentConnectionMode == WirelessHandler::MODE::WIFI){
-          // check if wifi is connected and/or available
-          if(!wirelessHandler->isConnected() && (current - wirelessHandler->getCurrentModeStartTime()) >= WIFI_CONNECTION_RETRY_TIMEOUT_MILLIS){
-              updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR);
-              return;
-          }else{
-            // wifi is connected
-            int numUnitsNotInFileUploadMode = 0;
-
-            std::map<String, SamplingUnitRep>::iterator it;
-            for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
-                // check if in file upload mode
-                if(it->second.status != SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD){
-                    numUnitsNotInFileUploadMode++;
-                }
-                // ping each unit to make sure its connected to wifi (serves as a reverse status report)
-                try{
-                    if ((current - it->second.lastStatusUpdateMillis) >= STATUS_REPORT_DELAY_MILLIS) {
-                        syncManager->pingServerWifi(it->first);
-                        StatusUpdateMessage statusMessage;
-                        memcpy(statusMessage.from, it->second.mac, 6);
-                        statusMessage.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
-                        syncManager->addStatusUpdateMessage(statusMessage);
-                    }
-                }catch(...){
-                        StatusUpdateMessage statusMessage;
-                        memcpy(statusMessage.from, it->second.mac, 6);
-                        statusMessage.status = SamplerStatus::UNIT_ERROR;
-                        syncManager->addStatusUpdateMessage(statusMessage);
-                }
-            }
-
-            if(numUnitsNotInFileUploadMode != 0){
-                wirelessHandler->switchToESPNow();
-            }
-          }
-      } else if(currentConnectionMode == WirelessHandler::MODE::ESP_NOW){
-        if((current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
-            wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
-            return;
-        }else if(wirelessHandler->isConnected()){
-            std::map<String, SamplingUnitRep>::iterator it;
-            std::map<String, String> commandParams;
-            commandParams["WIFI_SSID"] = WIFI_SSID;
-            commandParams["WIFI_PASSWORD"] = WIFI_PASSWORD;
-            for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
-              if(it->second.status != SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD){
-                  sendESPNowCommand(it->second, ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, commandParams);
-              }
-            }
+void SurfboardMainUnit::loopFileUpload() {
+  unsigned long current = millis();
+  WirelessHandler::MODE currentConnectionMode = wirelessHandler->getCurrentMode();
+  
+  if(currentConnectionMode == WirelessHandler::MODE::WIFI){
+    if(!wirelessHandler->isConnected()){
+        if((current - wirelessHandler->getCurrentModeStartTime()) >= WIFI_CONNECTION_RETRY_TIMEOUT_MILLIS){
+          updateStatus(SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_WIFI_ERROR);
         }
-      }
-    } else if(status == SystemStatus::SYSTEM_SAMPLE_FILE_UPLOAD_STOPPING){
-      // handle status switch from FILE_UPLOAD to STAND_BY
-      if((current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_STOP_CONNECTION_SWITCH_INTERVAL){
-          if(currentConnectionMode == WirelessHandler::MODE::WIFI){
-              wirelessHandler->switchToESPNow();
-          }else{
-              wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
-          }
-          return;
-      }
+        return;
+    }else{
+      // wifi is available and connected
+      int numUnitsNotInFileUploadMode = 0;
       std::map<String, SamplingUnitRep>::iterator it;
-      int numUnitsInStandBy = 0;
       for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
-          if(it->second.status != SamplerStatus::UNIT_STAND_BY){
-              if(currentConnectionMode == WirelessHandler::MODE::WIFI){
-                try{
-                    syncManager->sendWifiStopFileUploadCommand(it->first);
+          try{
+              if(it->second.dataCollectorServerIP == ""){
+                it->second.dataCollectorServerIP = syncManager->resolveHostnameToIP(it->second.mDNSHostname);
+              }else{
+                // ping each unit to make sure its connected to wifi (serves as a reverse status report)
+                if ((current - it->second.lastStatusUpdateMillis) >= STATUS_REPORT_DELAY_MILLIS) {
+                    logger->info("Pinging unit " + it->first);
+                    syncManager->pingServerWifi(it->second.dataCollectorServerIP);
                     StatusUpdateMessage statusMessage;
                     memcpy(statusMessage.from, it->second.mac, 6);
-                    statusMessage.status = SamplerStatus::UNIT_STAND_BY;
-                    syncManager->addStatusUpdateMessage(statusMessage);
-                }catch(...){
-                    StatusUpdateMessage statusMessage;
-                    memcpy(statusMessage.from, it->second.mac, 6);
-                    statusMessage.status = SamplerStatus::UNIT_ERROR;
+                    statusMessage.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
                     syncManager->addStatusUpdateMessage(statusMessage);
                 }
-              } else if(currentConnectionMode == WirelessHandler::MODE::ESP_NOW){
-                  std::map<String, String> commandParams;
-                  sendESPNowCommand(it->second, ControlUnitCommand::STOP_SAMPLE_FILES_UPLOAD,commandParams);
               }
-          }else{
-              numUnitsInStandBy++;
+          }catch(ConnectionTimeoutError& err){
+              logger->debug("Unit " + it->first + " IP's not resolved yet...");
+          }catch(...){
+              logger->debug("Failed to ping unit " + it->first);
+          }
+
+          // check if in file upload mode
+          if(it->second.status != SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD){
+              numUnitsNotInFileUploadMode++;
           }
       }
 
-      if(numUnitsInStandBy == samplingUnits.size()){
-          // all units are on standby
+      if(numUnitsNotInFileUploadMode != 0 && (current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
           wirelessHandler->switchToESPNow();
-          updateStatus(SystemStatus::SYSTEM_STAND_BY);
       }
     }
+  } 
+  
+  if(currentConnectionMode == WirelessHandler::MODE::ESP_NOW){
+    if((current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
+        wirelessHandler->switchToWifi(WIFI_SSID, WIFI_PASSWORD);
+        return;
+    }else if(wirelessHandler->isConnected()){
+        std::map<String, SamplingUnitRep>::iterator it;
+        std::map<String, String> commandParams;
+        commandParams["WIFI_SSID"] = WIFI_SSID;
+        commandParams["WIFI_PASSWORD"] = WIFI_PASSWORD;
+        for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
+          if(it->second.status != SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD){
+              sendESPNowCommand(it->second, ControlUnitCommand::START_SAMPLE_FILES_UPLOAD, commandParams);
+          }
+        }
+    }
+  }
 }
 
 void SurfboardMainUnit::loopSampling() {
@@ -373,40 +394,63 @@ void SurfboardMainUnit::loopSampling() {
     sampler->writeSensorsData();
   }
 
+  WirelessHandler::MODE currentConnectionMode = wirelessHandler->getCurrentMode();
+  if(currentConnectionMode != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
+    wirelessHandler->switchToESPNow();
+    return;
+  }
+
   // todo: handle case where esp is now on wifi mode
   // should send to esp units to stop, then send them  to start sampling
   // or just make sure we never get here in wifi mode...
+  discoverDisconnected();
 
   std::map<String, SamplingUnitRep>::iterator it;
+  std::map<String, String> commandParams;
+  commandParams["TIMESTAMP"] = String(currentSamplingSession);
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
     SamplerStatus unitStatus = it->second.status;
     if (unitStatus == SamplerStatus::UNIT_ERROR) {
       updateStatus(SystemStatus::SYSTEM_SAMPLING_PARTIAL_ERROR);
     }
     if (unitStatus != SamplerStatus::UNIT_SAMPLING) {
-      std::map<String, String> commandParams;
-      commandParams["TIMESTAMP"] = String(currentSamplingSession);
       sendESPNowCommand(it->second, ControlUnitCommand::START_SAMPLING, commandParams);
     }
   }
 }
 
 void SurfboardMainUnit::loopStandby() {
-  if (sampler->isSampling()) {
+  if(sampler->isSampling()) {
     sampler->stopSampling();
   }
 
+  WirelessHandler::MODE currentConnectionMode = wirelessHandler->getCurrentMode();
+  if(currentConnectionMode != WirelessHandler::MODE::ESP_NOW || !wirelessHandler->isConnected()){
+    wirelessHandler->switchToESPNow();
+    return;
+  }
+
   std::map<String, SamplingUnitRep>::iterator it;
+  std::map<String, String> commandParams;
+  int numStandBy = 0;
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
     SamplerStatus unitStatus = it->second.status;
-    if (unitStatus == SamplerStatus::UNIT_SAMPLING) {
-      std::map<String, String> commandParams;
+    if (unitStatus != SamplerStatus::UNIT_STAND_BY) {
       sendESPNowCommand(it->second, ControlUnitCommand::STOP_SAMPLING, commandParams);
+      updateStatus(SystemStatus::SYSTEM_STAND_BY_PARTIAL_ERROR);
+    }else{
+      numStandBy++;
     }
   }
+
+  if(numStandBy == samplingUnits.size()){
+    updateStatus(SystemStatus::SYSTEM_STAND_BY);
+  }
+
+  discoverDisconnected();
 }
 
-void SurfboardMainUnit::loopDiscoverDisconnected() {
+void SurfboardMainUnit::discoverDisconnected() {
   unsigned long current = millis();
   std::map<String, SamplingUnitRep>::iterator it;
   for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {

@@ -15,6 +15,7 @@ class EndOfFileError: public BaseError {};
 class InvalidSyncMessage: public BaseError {};
 class InvalidConfigFile: public BaseError {};
 class InvalidData: public BaseError {};
+class ConnectionTimeoutError: public BaseError {};
 
 
 #endif /* UNIT_EXCEPTIONS_H */
