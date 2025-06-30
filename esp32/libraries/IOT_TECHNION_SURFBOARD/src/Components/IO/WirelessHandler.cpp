@@ -126,33 +126,33 @@ void WirelessHandler::loop(){
 }
 
 void WirelessHandler::disconnectWifi(){
-    logger->info(F("Disconnecting from WiFi..."));
+    logger->debug(F("Disconnecting from WiFi..."));
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     currentStatus = WirelessHandler::STATUS::WIFI_DISCONNECTING;
-    setDelayPeriod(100);
+    setDelayPeriod(200);
 }
 
 void WirelessHandler::connectWifi(){
     if(WiFi.status() == WL_CONNECTED){
         return;
     }else{
-        logger->info("Starting WiFi connection...Connecting to " + wifi_ssid);
+        logger->debug("Starting WiFi connection...Connecting to " + wifi_ssid);
         WiFi.mode(WIFI_STA);
         WiFi.setAutoReconnect(true);
         WiFi.persistent(true);
         WiFi.begin(wifi_ssid.c_str(), wifi_password.c_str());
         currentStatus = WirelessHandler::STATUS::WIFI_CONNECTING;
-        setDelayPeriod(500);
+        setDelayPeriod(3000);
     }
 }
 
 void WirelessHandler::disconnectEspNow(){
-    logger->info("Disconnecting esp now connection...");
+    logger->debug("Disconnecting esp now connection...");
     WiFi.disconnect(true);
     esp_now_deinit();
     currentStatus = WirelessHandler::STATUS::ESP_NOW_DISCONNECTING;
-    setDelayPeriod(100);
+    setDelayPeriod(200);
 }
 
 void WirelessHandler::connectEspNow(){
@@ -168,7 +168,7 @@ void WirelessHandler::connectEspNow(){
     }
     esp_now_register_recv_cb(esp_rec_ballback);
     currentStatus = WirelessHandler::STATUS::ESP_NOW_CONNECTING;
-    setDelayPeriod(100);
+    setDelayPeriod(200);
 }
 
 bool WirelessHandler::isInDelay(){

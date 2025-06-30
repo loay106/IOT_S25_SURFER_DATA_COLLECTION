@@ -6,8 +6,8 @@ int serialBaudRate = 115200;
 int SDCardChipSelectPin = 5;
 
 //********************************************* CONFIG PARAMS ***********************************
-String WIFI_SSID = "TestPhone";
-String WIFI_PASSWORD= "test123456";
+String WIFI_SSID = "";
+String WIFI_PASSWORD = "";
 String SENSORS_PARAMS = "[]";
 //********************************************* END OF CONFIG PARAMS ****************************
 

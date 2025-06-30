@@ -334,7 +334,7 @@ void SurfboardMainUnit::loopFileUpload() {
         return;
     }else{
       // wifi is available and connected
-      int numUnitsNotInFileUploadMode = 0;
+      int numUnitsInFileUploadMode = 0;
       std::map<String, SamplingUnitRep>::iterator it;
       for (it = samplingUnits.begin(); it != samplingUnits.end(); it++) {
           try{
@@ -349,21 +349,23 @@ void SurfboardMainUnit::loopFileUpload() {
                     memcpy(statusMessage.from, it->second.mac, 6);
                     statusMessage.status = SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD;
                     syncManager->addStatusUpdateMessage(statusMessage);
+                    numUnitsInFileUploadMode++;
                 }
               }
           }catch(ConnectionTimeoutError& err){
               logger->debug("Unit " + it->first + " IP's not resolved yet...");
           }catch(...){
               logger->debug("Failed to ping unit " + it->first);
-          }
-
-          // check if in file upload mode
-          if(it->second.status != SamplerStatus::UNIT_SAMPLE_FILES_UPLOAD){
-              numUnitsNotInFileUploadMode++;
+              // reset ip resolution because unit may have been reconnected with a new IP
+              it->second.dataCollectorServerIP = "";
+              StatusUpdateMessage statusMessage;
+              memcpy(statusMessage.from, it->second.mac, 6);
+              statusMessage.status = SamplerStatus::UNIT_ERROR;
+              syncManager->addStatusUpdateMessage(statusMessage);
           }
       }
 
-      if(numUnitsNotInFileUploadMode != 0 && (current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
+      if(numUnitsInFileUploadMode != samplingUnits.size() && (current - wirelessHandler->getCurrentModeStartTime()) >= FILE_UPLOAD_ESP_NOW_CONNECTION_LIMIT_MILLIS){
           wirelessHandler->switchToESPNow();
       }
     }
