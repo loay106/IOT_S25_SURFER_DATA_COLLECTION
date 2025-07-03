@@ -49,8 +49,8 @@ This project is version 3.0 of the [previous](https://github.com/loay106/IOT_W25
    1. RTClib (by Adafruit) - version 2.1.4
    2. HX711 (by Rob Tillaart) - version 0.5.2
    3. SparkFun BNO080 Cortex Based IMU (by SparkFun) - version 1.1.12
-   4. AsyncTCP (ESP32Async)
-   5. ESPAsyncWebServer (ESP32Async)
+   4. Async TCP (by ESP32Async) - version 3.3.8
+   5. ESP Async WebServer (by ESP32Async) - version 3.7.6
 
 
    
